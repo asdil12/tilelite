@@ -1,22 +1,34 @@
 TileLite
 --------
 
-An ultra lightweight Mapnik WSGI tile-server using the OSM (OpenStreetMap) tile scheme.
+An ultra lightweight Mapnik tile-server written as a WSGI (Web Server Gateway Interface) application.
 
-Supports reading from a Mapnik XML mapfile, optional tile caching, and nothing more.
+Designed for fast, dynamic rendering of web tiles in the OSM scheme (zoom/x/y.png).
 
-A multiprocess server not a threaded server. Use Mod_tile or TileCache if you want threading.
+Requires only Python, Mapnik, and the Mapnik xml mapfile you wish to serve.
+ 
+Supports aggressive caching of Map objects in memory, optional tile caching, and deployment in a multi-process environment.
 
-Comes bundled with a development server that can be run from the commandline::
+Perfect for tile rendering scenarios where the extensive flexibility of TileCache[1] or the sophisticated queuing of Mod_tile[2] are unneeded, and easy setup and speed to first rendering are top priorities.
 
-  $ liteserv <xml> [options]
+TileLite comes bundled with a development server that can be run from the commandline::
 
-Accepts a optional configuration file for customization of various tile and caching parameters.
+  $ liteserv.py <xml> [options]
+
+TileLite can be deployed with ModWsgi using one thread and many processes. For deployment TileLite can read from an optional configuration file for customization of various tile rendering and caching parameters.
 
 
 More info
 ---------
 
-See the documentation in the 'docs' folder.
+See the notes in the 'docs' folder.
 
 http://bitbucket.org/springmeyer/tilelite/
+
+
+References
+----------
+
+[1] If you need to WMS, TMS, seeding, or custom projection support TileCache is awesome (http://tilecache.org/)
+
+[2] If you need server queuing, threading, and expiry support use the powerful Mod_tile (http://wiki.openstreetmap.org/wiki/Mod_tile)
