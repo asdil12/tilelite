@@ -92,6 +92,8 @@ class WsgiServer(object):
         self.mapnik_map = Map(self.tile,self.tile)
         self.mapfile = mapfile
         load_map(self.mapnik_map, mapfile)
+        # enforce mercator projection
+        self.mapnik_map.srs = MERC_PROJ4
 
     def msg(self,message):
         """ WSGI apps must not print to stdout.
