@@ -1,0 +1,9 @@
+syntax: glob
+*.pyc
+.DS_Store
+*.svn
+dist
+build
+MANIFEST
+archive
+cache
