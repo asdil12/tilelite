@@ -78,7 +78,7 @@ class WsgiServer(object):
         # defaults
         self.debug = True
         self.cache_mode = 'off'
-        self.cache_base = 'cache'
+        self.cache_path = 'tiles'
         self.buffer_size = self.tile/2
         self.max_zoom = 18
         self.format = None
@@ -106,18 +106,23 @@ class WsgiServer(object):
         """
         """
         if options.get('cache'):
-            self.cache_mode = options['cache'].get('mode','off')
-            cache_base = options['cache'].get('base')
-            if cache_base:
-              self.cache_base = cache_base
+            self.cache_mode = options['cache'].get('cache_mode','off')
+            cache_path = options['cache'].get('cache_path')
+            if cache_path:
+              self.cache_path = cache_path
         if options.get('tiles'):
             self.format = options['tiles'].get('format','png')
+            paletted = options['tiles'].get('paletted','no')
+            if paletted in ['yes','y','true']:
+                self.paletted = True
             max_zoom = options['tiles'].get('max_zoom')
             if max_zoom.isdigit():
                 self.max_zoom = int(max_zoom)
             buffer_size = options['tiles'].get('buffer_size')
             if buffer_size.isdigit():
                 self.buffer_size = int(buffer_size)
+        for k,v in self.__dict__.items():
+            self.msg('%s = %s' % (k,v))
 
     def forward_bbox(self,x,y,zoom):
         """
@@ -144,7 +149,7 @@ class WsgiServer(object):
             zoom,x,y = map(int,uri.split('/')[-3:])
             im = Image(self.tile,self.tile)
             if not self.cache_mode == 'off':
-                tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_base,zoom,x,y,self.format)
+                tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
                 if self.cache_mode == 'regen' or not path.exists(tile_cache_path):
                     envelope = self.forward_bbox(x,y,zoom)
                     self.mapnik_map.zoom_to_box(envelope)
