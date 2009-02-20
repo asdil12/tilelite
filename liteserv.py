@@ -13,7 +13,7 @@ parser = OptionParser(usage="""
     """)
 
 parser.add_option('-n', '--name', default='localhost', dest='host',
-    help='Specify a host name(default it localhost)'
+    help='Specify a host name (defaults to localhost)'
     )
 
 parser.add_option('-p', '--port', default=8000, dest='port', type='int',
@@ -21,7 +21,7 @@ parser.add_option('-p', '--port', default=8000, dest='port', type='int',
     )
 
 parser.add_option('-c', '--config', default=None, dest='config',
-    help='''Specify the use of a custom TileLite config file to override default settings. By default looks for a file locally called 'tilelite.conf'.'''
+    help='''Specify the use of a custom TileLite config file to override default settings. By default looks for a file locally called 'tilelite.cfg'.'''
     )
 
 
