@@ -55,6 +55,7 @@ if __name__ == '__main__':
     # Here we go...
     from tilelite import WsgiServer
     application = WsgiServer(mapfile, CONFIG)
+    application.debug_prefix = False
     # since this is the dev server make sure to print output to stdout
     
     #http_setup = options.host, options.port

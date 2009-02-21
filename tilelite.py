@@ -65,6 +65,8 @@ class SphericalMercator(object):
         h = self.RAD_TO_DEG * ( 2 * atan(exp(g)) - 0.5 * pi)
         return (f,h)
 
+TRUE = ['on','ON','On','yes','y','Yes','true','True','yup']
+
 class WsgiServer(object):
     """
     """
@@ -74,11 +76,12 @@ class WsgiServer(object):
         # constants
         self.prj = Projection(MERC_PROJ4)
         self.tile = 256
+        self.debug_prefix = True
 
         # defaults
         self.debug = True
-        self.cache_mode = 'off'
-        self.cache_path = 'tiles'
+        self.cache_mode = False
+        self.cache_path = '/tmp'
         self.buffer_size = self.tile/2
         self.max_zoom = 18
         self.format = None
@@ -86,6 +89,7 @@ class WsgiServer(object):
         
         # if config is used, overwrite defaults
         if config:
+            self.config = config
             self.aborb_options(parse_config(config))
         # init the proj and map
         self.g = SphericalMercator(self.max_zoom+1)
@@ -99,28 +103,30 @@ class WsgiServer(object):
         """ WSGI apps must not print to stdout.
         """
         if self.debug:
-            print >> stderr, '[TileLite Debug] --> %s' % message
+            if self.debug_prefix:
+                print >> stderr, '%s' % message
+            else:
+                print >> stderr, '[TileLite Debug] --> %s' % message
+
 
     # move this out of main class...
     def aborb_options(self,options):
         """
         """
         if options.get('cache'):
-            self.cache_mode = options['cache'].get('cache_mode','off')
-            cache_path = options['cache'].get('cache_path')
-            if cache_path:
-              self.cache_path = cache_path
+            self.cache_mode = options['cache'].get('cache_mode') in TRUE
+            self.cache_force = options['cache'].get('cache_force') in TRUE
+            self.cache_path = options['cache'].get('cache_path',self.cache_path)
         if options.get('tiles'):
+            self.paletted = options['tiles'].get('paletted') in TRUE
             self.format = options['tiles'].get('format','png')
-            paletted = options['tiles'].get('paletted','no')
-            if paletted in ['yes','y','true']:
-                self.paletted = True
             max_zoom = options['tiles'].get('max_zoom')
             if max_zoom.isdigit():
                 self.max_zoom = int(max_zoom)
             buffer_size = options['tiles'].get('buffer_size')
             if buffer_size.isdigit():
                 self.buffer_size = int(buffer_size)
+        self.msg("TileLite customized by reading '%s'" % self.config)
         for k,v in self.__dict__.items():
             self.msg('%s = %s' % (k,v))
 
@@ -148,9 +154,9 @@ class WsgiServer(object):
             uri, self.format = path_info.split('.')
             zoom,x,y = map(int,uri.split('/')[-3:])
             im = Image(self.tile,self.tile)
-            if not self.cache_mode == 'off':
+            if self.cache_mode:
                 tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
-                if self.cache_mode == 'regen' or not path.exists(tile_cache_path):
+                if self.cache_force or not path.exists(tile_cache_path):
                     envelope = self.forward_bbox(x,y,zoom)
                     self.mapnik_map.zoom_to_box(envelope)
                     self.mapnik_map.buffer_size = self.buffer_size
@@ -161,7 +167,7 @@ class WsgiServer(object):
                     else:
                         im.save(tile_cache_path)
                     self.msg('saving...%s' % tile_cache_path)
-                elif self.cache_mode == 'on':
+                elif self.cache_mode:
                     # todo: benchmark opening without using mapnik...
                     im = im.open(tile_cache_path)
                     self.msg('cache hit!')

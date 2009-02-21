@@ -6,13 +6,15 @@ Getting Started
 
 TODO
 
-Using TileLite local server
-===========================
+
+Using an optional config file
+=============================
+
 
 TODO
 
 
-How to implement Cacheing
+How to implement Caching
 =========================
 
 TODO
