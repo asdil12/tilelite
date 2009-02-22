@@ -47,6 +47,4 @@ append_local_dir()
 
 from tilelite import WsgiServer
 
-#application = WsgiServer(os.path.join(local_dir,'utils/us_states_merc.xml'))#,'tilelite.conf')
-
-application = WsgiServer('/Users/spring/mapnik/osm.xml')
+application = WsgiServer('/path/to/mapfile.xml')
