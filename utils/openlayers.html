@@ -50,6 +50,11 @@
             
             map = new OpenLayers.Map("map", options);
             
+            function maxResForTileSize(tileSize){
+                var pi = 3.1415926535900001;
+                return 6378137 * 2 * pi/tileSize
+                
+            }
             
             var tiles_url = "http://localhost:8000/"
             // Note this is an openlayers/browser trick of pointing to multiple urls,
@@ -62,9 +67,8 @@
                         {   type: "png",
                             getURL: getTileURL,
                             attribution: "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>",
-                            maxResolution: 156543.0339,
+                            maxResolution: maxResForTileSize(256),
                             maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
-                            maxResolution: 156543.0339,
                             units: "m",
                             projection: "EPSG:900913",
                             gutter:0,
@@ -73,16 +77,35 @@
                             transitionEffect:'resize'
                         }
                     );
+
+            var tilelite_512 = new OpenLayers.Layer.TileCache("Tilelite server layer", servers,
+                    "dummy", // layername: unused but must be set
+                        {   type: "png",
+                            getURL: getTileURL,
+                            maxResolution: maxResForTileSize(512),
+                            tileSize: new OpenLayers.Size(512,512),
+                        }
+                    );
             
+            var tilelite_64 = new OpenLayers.Layer.TileCache("Tilelite server layer", servers,
+                    "dummy", // layername: unused but must be set
+                        {   type: "png",
+                            getURL: getTileURL,
+                            maxResolution: maxResForTileSize(64),
+                            tileSize: new OpenLayers.Size(64,64),
+                        }
+                    );
+                        
             // To create the tilelite layers lets borrow from the OSM layer contructor but repoint urls to localhost
             tilelite_layer = new OpenLayers.Layer.OSM.Mapnik("TileLite Server Layer");
             tilelite_layer.url = servers;
+            tilelite_layer.buffer = 0;
             tilelite_layer.attribution = "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>"
                         
             // Uses linked OpenStreetMap.js from openstreetmap as a comparison layer
             osm_official_tiles = new OpenLayers.Layer.OSM.Mapnik("OpenStreetMap (Mapnik)");
                                      
-            map.addLayers([tilelite_layer,osm_official_tiles]);
+            map.addLayers([tilelite_layer,tilelite_512,osm_official_tiles]);
             map.addControl(new OpenLayers.Control.Scale());
             map.addControl(new OpenLayers.Control.MousePosition());
             map.addControl(new OpenLayers.Control.Navigation()); 

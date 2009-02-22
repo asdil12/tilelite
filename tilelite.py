@@ -6,6 +6,7 @@ __version__ = "0.1SVN"
 __license__ = "BSD"
 
 from sys import stderr
+from urllib import unquote
 from os import makedirs, path
 from math import pi, cos, sin, log, exp, atan
 from mapnik import Map, Image, Projection, Envelope, load_map, render
@@ -13,25 +14,40 @@ from mapnik import Map, Image, Projection, Envelope, load_map, render
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
 
 def parse_config(cfg_file):
-    """
-    """
     from ConfigParser import SafeConfigParser
     config = SafeConfigParser()
     config.read(cfg_file)
-    sections = {}
+    params = {}
     for section in config.sections():
-        params = {}
         options = config.items(section)
         for param in options:
             params[param[0]] = param[1]
-        sections[section] = params
-    return sections
+    return params
+
+def parse_query(qs):
+    variables = {}
+    for i in unquote(qs).split('&'):
+        k, v = i.split('=')
+        variables[k] = v
+    return variables
 
 def is_image_request(path_info):
     if path_info.endswith('.png') | path_info.endswith('.jpeg'):
         return True
     return False
 
+def match(attr,value):
+    if isinstance(attr,bool) and value.lower() in ['on','yes','y','true']:
+        return True
+    elif isinstance(attr,bool):
+        return False
+    elif isinstance(attr,int):
+        return int(value)
+    elif isinstance(attr,str):
+        return value
+    else:
+        return None
+        
 class SphericalMercator(object):
     """
     Python class defining Spherical Mercator Projection.
@@ -39,14 +55,14 @@ class SphericalMercator(object):
     Originally from:  
       http://svn.openstreetmap.org/applications/rendering/mapnik/generate_tiles.py
     """
-    def __init__(self,levels=18):
+    def __init__(self,levels=18,tilesize=256):
         self.Bc = []
         self.Cc = []
         self.zc = []
         self.Ac = []
         self.DEG_TO_RAD = pi/180
         self.RAD_TO_DEG = 180/pi
-        c = 256
+        c = tilesize
         for d in range(0,levels):
             e = c/2;
             self.Bc.append(c/360.0)
@@ -65,35 +81,33 @@ class SphericalMercator(object):
         h = self.RAD_TO_DEG * ( 2 * atan(exp(g)) - 0.5 * pi)
         return (f,h)
 
-TRUE = ['on','ON','On','yes','y','Yes','true','True','yup']
-
 class WsgiServer(object):
     """
     """
-    def __init__(self, mapfile, config=None):    
+    def __init__(self, mapfile, config=None, debug_prefix=True):    
         """
         """
-        # constants
-        self.prj = Projection(MERC_PROJ4)
-        self.tile = 256
-        self.debug_prefix = True
+        # private
+        self._prj = Projection(MERC_PROJ4)
+        self._debug_prefix = debug_prefix
+        self._changed = []
 
-        # defaults
+        # mutable
+        self.size = 256
         self.debug = True
-        self.cache_mode = False
+        self.caching = False
+        self.cache_force = False
         self.cache_path = '/tmp'
-        self.buffer_size = self.tile/2
+        self.buffer_size = 128
         self.max_zoom = 18
         self.format = None
         self.paletted = False
         
-        # if config is used, overwrite defaults
         if config:
-            self.config = config
             self.aborb_options(parse_config(config))
         # init the proj and map
-        self.g = SphericalMercator(self.max_zoom+1)
-        self.mapnik_map = Map(self.tile,self.tile)
+        self.g = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
+        self.mapnik_map = Map(self.size,self.size)
         self.mapfile = mapfile
         load_map(self.mapnik_map, mapfile)
         # enforce mercator projection
@@ -103,40 +117,35 @@ class WsgiServer(object):
         """ WSGI apps must not print to stdout.
         """
         if self.debug:
-            if self.debug_prefix:
+            if not self._debug_prefix:
                 print >> stderr, '%s' % message
             else:
                 print >> stderr, '[TileLite Debug] --> %s' % message
 
-
-    # move this out of main class...
-    def aborb_options(self,options):
+    def aborb_options(self,opts):
         """
         """
-        if options.get('cache'):
-            self.cache_mode = options['cache'].get('cache_mode') in TRUE
-            self.cache_force = options['cache'].get('cache_force') in TRUE
-            self.cache_path = options['cache'].get('cache_path',self.cache_path)
-        if options.get('tiles'):
-            self.paletted = options['tiles'].get('paletted') in TRUE
-            self.format = options['tiles'].get('format','png')
-            max_zoom = options['tiles'].get('max_zoom')
-            if max_zoom.isdigit():
-                self.max_zoom = int(max_zoom)
-            buffer_size = options['tiles'].get('buffer_size')
-            if buffer_size.isdigit():
-                self.buffer_size = int(buffer_size)
-        self.msg("TileLite customized by reading '%s'" % self.config)
+        for opt in opts.items():
+            attr = opt[0]
+            if hasattr(self,attr):
+                cur = getattr(self,attr)
+                new = match(cur,opt[1])
+                if new and not new == cur:
+                    setattr(self,attr,new)
+                    self._changed.append(attr)
         for k,v in self.__dict__.items():
-            self.msg('%s = %s' % (k,v))
+            if not k.startswith('_'):
+                if k in self._changed:
+                    v = '%s *changed' % v
+                self.msg('%s = %s' % (k,v))
 
     def forward_bbox(self,x,y,zoom):
         """
         """
-        minx,miny = self.g.fromPixelToLL((x*self.tile,(y+1)*self.tile),zoom)
-        maxx,maxy = self.g.fromPixelToLL(((x+1)*self.tile, y*self.tile),zoom)
+        minx,miny = self.g.fromPixelToLL((x*self.size,(y+1)*self.size),zoom)
+        maxx,maxy = self.g.fromPixelToLL(((x+1)*self.size, y*self.size),zoom)
         lonlat_bbox = Envelope(minx,miny,maxx,maxy)
-        merc_bbox = lonlat_bbox.forward(self.prj)
+        merc_bbox = lonlat_bbox.forward(self._prj)
         return merc_bbox
 
     def ready_cache(self,path_to_check):
@@ -150,11 +159,12 @@ class WsgiServer(object):
         """
         """
         path_info = environ['PATH_INFO']
+        #qs = environ['QUERY_STRING']
         if is_image_request(path_info):
             uri, self.format = path_info.split('.')
             zoom,x,y = map(int,uri.split('/')[-3:])
-            im = Image(self.tile,self.tile)
-            if self.cache_mode:
+            im = Image(self.size,self.size)
+            if self.caching:
                 tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
                 if self.cache_force or not path.exists(tile_cache_path):
                     envelope = self.forward_bbox(x,y,zoom)
@@ -167,7 +177,7 @@ class WsgiServer(object):
                     else:
                         im.save(tile_cache_path)
                     self.msg('saving...%s' % tile_cache_path)
-                elif self.cache_mode:
+                elif self.caching:
                     # todo: benchmark opening without using mapnik...
                     im = im.open(tile_cache_path)
                     self.msg('cache hit!')

@@ -41,7 +41,10 @@ if __name__ == '__main__':
     print "Using mapfile: '%s'" % os.path.abspath(mapfile)
         
     if options.config:
-        CONFIG = options.config
+        if not os.path.isfile(options.config):
+            sys.exit('That does not appear to be a config file')
+        else:
+            CONFIG = options.config
 
     if not os.path.exists(CONFIG):
         if options.config:
@@ -54,8 +57,7 @@ if __name__ == '__main__':
     
     # Here we go...
     from tilelite import WsgiServer
-    application = WsgiServer(mapfile, CONFIG)
-    application.debug_prefix = False
+    application = WsgiServer(mapfile, CONFIG, debug_prefix=False)
     # since this is the dev server make sure to print output to stdout
     
     #http_setup = options.host, options.port
