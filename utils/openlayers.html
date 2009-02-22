@@ -57,47 +57,50 @@
             }
             
             var tiles_url = "http://localhost:8000/"
-            // Note this is an openlayers/browser trick of pointing to multiple urls,
+            // Note this is an openlayers/browser trick for pointing to multiple urls for speed,
             // TileLite just happens to work with it out of the box since it ignores any url prefix
             var servers = [tiles_url+'a/',tiles_url+'b/',tiles_url+'c/']
 
-            // http://trac.openlayers.org/browser/trunk/openlayers/lib/OpenLayers/Layer/TileCache.js#L75            
-            __tilelite_layer = new OpenLayers.Layer.TileCache("Tilelite server layer", servers,
-                    "dummy", // layername: unused but must be set
-                        {   type: "png",
-                            getURL: getTileURL,
-                            attribution: "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>",
-                            maxResolution: maxResForTileSize(256),
-                            maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
-                            units: "m",
-                            projection: "EPSG:900913",
-                            gutter:0,
-                            //ratio:1,
-                            //wrapDateLine: true,
-                            transitionEffect:'resize'
-                        }
-                    );
-
-            var tilelite_512 = new OpenLayers.Layer.TileCache("Tilelite server layer", servers,
-                    "dummy", // layername: unused but must be set
-                        {   type: "png",
-                            getURL: getTileURL,
-                            maxResolution: maxResForTileSize(512),
-                            tileSize: new OpenLayers.Size(512,512),
-                        }
-                    );
-            
-            var tilelite_64 = new OpenLayers.Layer.TileCache("Tilelite server layer", servers,
+            // Create an OSM-like tiling layer from a TileCache layer by overriding the 'getURL()'
+            // http://trac.openlayers.org/browser/trunk/openlayers/lib/OpenLayers/Layer/TileCache.js#L75           
+            var tilelite_64 = new OpenLayers.Layer.TileCache("Tilelite - serving 64 pixel tiles", servers,
                     "dummy", // layername: unused but must be set
                         {   type: "png",
                             getURL: getTileURL,
                             maxResolution: maxResForTileSize(64),
+                            gutter:0,
+                            buffer:0,
                             tileSize: new OpenLayers.Size(64,64),
+                            transitionEffect:'resize'
                         }
                     );
+            
+            tilelite_256 = new OpenLayers.Layer.TileCache("Tilelite - serving 256 pixel tiles", servers,
+                    "dummy", // layername: unused but must be set
+                        {   type: "png",
+                            getURL: getTileURL,
+                            maxResolution: maxResForTileSize(256),
+                            gutter:0,
+                            buffer:0,
+                            transitionEffect:'resize'
+                        }
+                    );
+
+            var tilelite_512 = new OpenLayers.Layer.TileCache("Tilelite - serving 512 pixel tiles", servers,
+                    "dummy", // layername: unused but must be set
+                        {   type: "png",
+                            getURL: getTileURL,
+                            maxResolution: maxResForTileSize(512),
+                            gutter:0,
+                            buffer:0,
+                            tileSize: new OpenLayers.Size(512,512),
+                            transitionEffect:'resize'
+                        }
+                    );
+            
                         
-            // To create the tilelite layers lets borrow from the OSM layer contructor but repoint urls to localhost
-            tilelite_layer = new OpenLayers.Layer.OSM.Mapnik("TileLite Server Layer");
+            // Alternate way of creating a tilelite layer -> borrow from the OSM layer contructor but repoint urls to localhost
+            tilelite_layer = new OpenLayers.Layer.OSM.Mapnik("TileLite Server Layer from OSM Layer (256 px tiles)");
             tilelite_layer.url = servers;
             tilelite_layer.buffer = 0;
             tilelite_layer.attribution = "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>"
@@ -105,7 +108,7 @@
             // Uses linked OpenStreetMap.js from openstreetmap as a comparison layer
             osm_official_tiles = new OpenLayers.Layer.OSM.Mapnik("OpenStreetMap (Mapnik)");
                                      
-            map.addLayers([tilelite_layer,tilelite_512,osm_official_tiles]);
+            map.addLayers([tilelite_layer,osm_official_tiles,tilelite_64,tilelite_256,tilelite_512]);
             map.addControl(new OpenLayers.Control.Scale());
             map.addControl(new OpenLayers.Control.MousePosition());
             map.addControl(new OpenLayers.Control.Navigation()); 
@@ -113,8 +116,8 @@
             var ls = new OpenLayers.Control.LayerSwitcher()
             map.addControl(ls);
             ls.maximizeControl();
-            //map.zoomToMaxExtent();
-            map.zoomToExtent(new OpenLayers.Bounds(-14301062.241481643,5702202.309052736,-12773544.668504298,6266001.829583203))
+            map.zoomToMaxExtent();
+            //map.zoomToExtent(new OpenLayers.Bounds(-14301062.241481643,5702202.309052736,-12773544.668504298,6266001.829583203))
             }
     </script>
   </head>

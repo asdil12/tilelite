@@ -94,15 +94,16 @@ class WsgiServer(object):
 
         # mutable
         self.size = 256
+        self.buffer_size = 128
+        self.format = None
+        self.paletted = False
+        self.max_zoom = 18
         self.debug = True
+
         self.caching = False
         self.cache_force = False
         self.cache_path = '/tmp'
-        self.buffer_size = 128
-        self.max_zoom = 18
-        self.format = None
-        self.paletted = False
-        
+
         if config:
             self.aborb_options(parse_config(config))
         # init the proj and map
@@ -127,7 +128,7 @@ class WsgiServer(object):
         """
         for opt in opts.items():
             attr = opt[0]
-            if hasattr(self,attr):
+            if hasattr(self,attr)not attr.startswith('_'):
                 cur = getattr(self,attr)
                 new = match(cur,opt[1])
                 if new and not new == cur:
