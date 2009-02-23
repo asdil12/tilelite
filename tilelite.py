@@ -128,7 +128,7 @@ class WsgiServer(object):
         """
         for opt in opts.items():
             attr = opt[0]
-            if hasattr(self,attr)not attr.startswith('_'):
+            if hasattr(self,attr) and not attr.startswith('_'):
                 cur = getattr(self,attr)
                 new = match(cur,opt[1])
                 if new and not new == cur:

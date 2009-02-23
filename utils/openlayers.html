@@ -107,6 +107,7 @@
                         
             // Uses linked OpenStreetMap.js from openstreetmap as a comparison layer
             osm_official_tiles = new OpenLayers.Layer.OSM.Mapnik("OpenStreetMap (Mapnik)");
+            osm_official_tiles.attribution = "Map Data CC-BY-SA Openstreetmap.org"
                                      
             map.addLayers([tilelite_layer,osm_official_tiles,tilelite_64,tilelite_256,tilelite_512]);
             map.addControl(new OpenLayers.Control.Scale());
