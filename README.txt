@@ -16,6 +16,8 @@ Goals
  * To complement the more flexibile TileCache[1] by providing a more lean, single-purpose tool.
  
  * To complement to the powerful Mod_tile[2] by providing an effortless way of running locally or embedding within Apache.
+
+ * Able to work alongside the generate_tiles.py script[3] by serving or regenerating a cache seeded by generate_tiles.py.
  
 
 Requires
@@ -51,3 +53,5 @@ References
 [1] If you need to WMS, TMS, seeding, or custom projection support TileCache is awesome (http://tilecache.org/)
 
 [2] If you need server queuing, threading, and expiry support use the powerful Mod_tile (http://wiki.openstreetmap.org/wiki/Mod_tile)
+
+[3] http://svn.openstreetmap.org/applications/rendering/mapnik/generate_tiles.py
