@@ -64,8 +64,9 @@ if __name__ == '__main__':
     #httpd = simple_server.WSGIServer(http_setup, WSGIRequestHandler)
     #httpd.set_app(application)
     httpd = make_server(options.host, options.port, application)
-    
     print "Listening on port %s..." % options.port
+    if not application.debug:
+        print 'TileLite debug mode is *off*...'
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
