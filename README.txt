@@ -21,7 +21,8 @@ Goals
 Requires
 --------
 
- * Requires Python, Mapnik (>= 0.6.0), and a Mapnik xml mapfile you wish to serve.
+ * Requires Python, Mapnik (>= 0.6.0), and a Mapnik xml or mml mapfile you wish to serve.
+ * Reading mml (Mapnik Markup Language) requires Cascadenik. 
 
 
 Features
