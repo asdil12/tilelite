@@ -8,6 +8,8 @@ Goals
 -----
 
  * Designed for fast, dynamic rendering of web tiles in the OSM scheme (zoom/x/y.png) and Google Mercator projection.
+
+ * Supports caching of tiles, various mapnik formats, and map buffers to avoid cut labels.
  
  * Maintains Map objects in memory for optimized rendering in a multi-process environment (not threaded).
 
@@ -24,6 +26,7 @@ Requires
 --------
 
  * Requires Python, Mapnik (>= 0.6.0), and a Mapnik xml or mml mapfile you wish to serve.
+
  * Reading mml (Mapnik Markup Language) requires Cascadenik. 
 
 
