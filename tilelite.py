@@ -5,7 +5,9 @@ __copyright__ = "Copyright 2009, Dane Springmeyer"
 __version__ = "0.1SVN"
 __license__ = "BSD"
 
+from os.path import getmtime
 from sys import stderr
+from time import sleep
 from urllib import unquote
 from os import makedirs, path
 from math import pi, cos, sin, log, exp, atan
@@ -95,6 +97,8 @@ class WsgiServer(object):
         self.paletted = False
         self.max_zoom = 18
         self.debug = True
+        self.watch_map = False
+        self.watch_interval = 2
 
         self.caching = False
         self.cache_force = False
@@ -107,7 +111,27 @@ class WsgiServer(object):
         self._merc = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
         self._mapnik_map = Map(self.size,self.size)
         self._mapfile = mapfile
+        self.load_mapfile(mapfile)
 
+        if self.watch_map:
+            self.last_modified = getmtime(self._mapfile)
+            import thread
+            # todo: need to keep track of threads
+            thread.start_new_thread(self.watcher, ())
+                
+    def watcher(self):
+        while 1:
+            if not self.last_modified == getmtime(self._mapfile):
+                self.load_mapfile(self._mapfile,reload=True)
+                self.msg('Mapfile **changed**, reloading %s' % self._mapfile)
+                self.last_modified = getmtime(self._mapfile)
+            sleep(self.watch_interval)
+    
+    def load_mapfile(self,mapfile,reload=False):
+        if reload:
+            try:
+                self._mapnik_map.remove_all()
+            except AttributeError: pass # only available in trunk
         if mapfile.endswith('.xml'):
             load_map(self._mapnik_map, mapfile)
         elif mapfile.endswith('.mml'):

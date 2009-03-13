@@ -25,6 +25,13 @@ parser.add_option('-c', '--config', default=None, dest='config',
     )
 
 
+def run(process):
+    try:
+        process.serve_forever()
+    except KeyboardInterrupt:
+        process.server_close()
+        sys.exit(0)
+
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
         
@@ -54,20 +61,17 @@ if __name__ == '__main__':
     
     if CONFIG:
         print "Using config file: '%s'" % os.path.abspath(CONFIG)        
-    
-    # Here we go...
-    from tilelite import WsgiServer
-    application = WsgiServer(mapfile, CONFIG, debug_prefix=False)
-    # since this is the dev server make sure to print output to stdout
-    
+
     #http_setup = options.host, options.port
     #httpd = simple_server.WSGIServer(http_setup, WSGIRequestHandler)
     #httpd.set_app(application)
+
+    from tilelite import WsgiServer
+    application = WsgiServer(mapfile, CONFIG, debug_prefix=False)
+    
     httpd = make_server(options.host, options.port, application)
     print "Listening on port %s..." % options.port
     if not application.debug:
         print 'TileLite debug mode is *off*...'
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        sys.exit(0)
+    
+    run(httpd)
