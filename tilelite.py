@@ -88,6 +88,7 @@ class Server(object):
         self._debug_prefix = debug_prefix
         self._changed = []
         self._config = config
+        self._locked = False
         
         # mutable
         self.size = 256
@@ -117,12 +118,24 @@ class Server(object):
             thread.start_new_thread(self.watcher, ())
                 
     def watcher(self):
+        failed = False
         while 1:
             if not self.modified == path.getmtime(self._mapfile):
-                self.load_mapfile(self._mapfile,reload=True)
-                self.msg('Mapfile **changed**, reloading %s' % self._mapfile)
+                self._locked = True
+                sleep(self.watch_interval/2.0)
+                if not failed:
+                    self.msg('Mapfile **changed**, reloading... ')
+                try:
+                    self.load_mapfile(self._mapfile,reload=True)
+                    sleep(self.watch_interval)
+                    self.msg('Mapfile successfuly reloaded from %s' % self._mapfile)
+                except:
+                    failed = True
+                    sleep(self.watch_interval*2)
                 self.modified = path.getmtime(self._mapfile)
-            sleep(self.watch_interval)
+                self._locked = False
+            else:
+                sleep(self.watch_interval)
         return
     
     def load_mapfile(self,mapfile,reload=False):
@@ -194,65 +207,69 @@ class Server(object):
     def __call__(self, environ, start_response):
         """
         """
-        path_info = environ['PATH_INFO']
-        if is_image_request(path_info):
-            uri, self.format = path_info.split('.')
-            zoom,x,y = map(int,uri.split('/')[-3:])
-            im = Image(self.size,self.size)
-            if self.caching:
-                tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
-                if self.cache_force or not path.exists(tile_cache_path):
+        if not self._locked:
+            path_info = environ['PATH_INFO']
+            if is_image_request(path_info):
+                uri, self.format = path_info.split('.')
+                zoom,x,y = map(int,uri.split('/')[-3:])
+                im = Image(self.size,self.size)
+                if self.caching:
+                    tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
+                    if self.cache_force or not path.exists(tile_cache_path):
+                        envelope = self.forward_bbox(x,y,zoom)
+                        self._mapnik_map.zoom_to_box(envelope)
+                        self._mapnik_map.buffer_size = self.buffer_size
+                        render(self._mapnik_map,im)
+                        self.ready_cache(tile_cache_path)
+                        if self.paletted:
+                            im.save(tile_cache_path,'png256')
+                        else:
+                            im.save(tile_cache_path)
+                        self.msg('saving...%s' % tile_cache_path)
+                    elif self.caching:
+                        # todo: benchmark opening without using mapnik...
+                        im = im.open(tile_cache_path)
+                        self.msg('cache hit!')
+                else:
                     envelope = self.forward_bbox(x,y,zoom)
                     self._mapnik_map.zoom_to_box(envelope)
                     self._mapnik_map.buffer_size = self.buffer_size
                     render(self._mapnik_map,im)
-                    self.ready_cache(tile_cache_path)
-                    if self.paletted:
-                        im.save(tile_cache_path,'png256')
-                    else:
-                        im.save(tile_cache_path)
-                    self.msg('saving...%s' % tile_cache_path)
-                elif self.caching:
-                    # todo: benchmark opening without using mapnik...
-                    im = im.open(tile_cache_path)
-                    self.msg('cache hit!')
+                if self.paletted:
+                    response = im.tostring('png256')
+                else:
+                    response = im.tostring(self.format)
+                mime_type = 'image/%s' % self.format
+                self.msg('X, Y, Zoom: %s,%s,%s' % (x,y,zoom))
+            elif path_info.endswith('settings/'):
+                response = '<h2>TileLite Settings</h2>'
+                response += '<pre style="%s">%s</pre>' % (CSS_STYLE,self.settings())
+                if self._config:
+                    response += '<h4>From: %s</h4>' % self._config
+                else:
+                    response += '<h4>*default settings*</h4>'
+                mime_type = 'text/html'
+            elif path_info.endswith('settings.json'):
+                response = str(self.settings_dict())
+                mime_type = 'text/plain'        
             else:
-                envelope = self.forward_bbox(x,y,zoom)
-                self._mapnik_map.zoom_to_box(envelope)
-                self._mapnik_map.buffer_size = self.buffer_size
-                render(self._mapnik_map,im)
-            if self.paletted:
-                response = im.tostring('png256')
-            else:
-                response = im.tostring(self.format)
-            mime_type = 'image/%s' % self.format
-            self.msg('X, Y, Zoom: %s,%s,%s' % (x,y,zoom))
-        elif path_info.endswith('settings/'):
-            response = '<h2>TileLite Settings</h2>'
-            response += '<pre style="%s">%s</pre>' % (CSS_STYLE,self.settings())
-            if self._config:
-                response += '<h4>From: %s</h4>' % self._config
-            else:
-                response += '<h4>*default settings*</h4>'
-            mime_type = 'text/html'
-        elif path_info.endswith('settings.json'):
-            response = str(self.settings_dict())
-            mime_type = 'text/plain'        
-        else:
-            root = '%s%s' % (environ['SCRIPT_NAME'], path_info.strip('/'))
-            response = '''<h2>TileLite</h2>
-            <div style="%(style)s"><p>Make a tile request in the format of %(root)s/zoom/x/y.png</p>
-            <p>ie: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
-            <p>See TileLite settings: <a href="%(root)s/settings/">%(root)s/settings/</a>
-            | <a href="%(root)s/settings.json">%(root)s/settings.json</a></p>
-            <p> More info: <a href="http://bitbucket.org/springmeyer/tilelite/">
-            bitbucket.org/springmeyer/tilelite/</a></p></div>
-            ''' % {'root': root,'style':CSS_STYLE}
-            mime_type = 'text/html'
+                root = '%s%s' % (environ['SCRIPT_NAME'], path_info.strip('/'))
+                response = '''<h2>TileLite</h2>
+                <div style="%(style)s"><p>Make a tile request in the format of %(root)s/zoom/x/y.png</p>
+                <p>ie: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
+                <p>See TileLite settings: <a href="%(root)s/settings/">%(root)s/settings/</a>
+                | <a href="%(root)s/settings.json">%(root)s/settings.json</a></p>
+                <p> More info: <a href="http://bitbucket.org/springmeyer/tilelite/">
+                bitbucket.org/springmeyer/tilelite/</a></p></div>
+                ''' % {'root': root,'style':CSS_STYLE}
+                mime_type = 'text/html'
             
-        response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
-        start_response('200 OK',response_headers)
-        yield response
+            response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
+            start_response("200 OK",response_headers)
+            yield response
+        else:    
+            start_response("404 Not Found", [('content-type', 'text/html')])
+            yield 'Not Found'
 
 if __name__ == '__main__':
     import doctest

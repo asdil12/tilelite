@@ -14,6 +14,10 @@
 <script src="http://openstreetmap.org/openlayers/OpenStreetMap.js"></script>
 <script type="text/javascript">
         var map, osm_official_tiles, tilelite_layer;
+
+        function getZoom(e) {
+            $('zoom').innerHTML = 'Zoom: ' + map.getZoom();
+        }
         
         function init() {
             
@@ -23,6 +27,7 @@
                 units: 'm',
                 projection: new OpenLayers.Projection("EPSG:900913"),
                 maxExtent: new OpenLayers.Bounds(-20037508.34, -20037508.34, 20037508.34, 20037508.34),
+                restrictedExtent: new OpenLayers.Bounds(16770012,-4044490,16876903,-3980726),
                 };
             
              function getTileURL (bounds) {
@@ -51,9 +56,9 @@
             map = new OpenLayers.Map("map", options);
             
             function maxResForTileSize(tileSize){
-                var pi = 3.1415926535900001;
-                return 6378137 * 2 * pi/tileSize
-                
+                //var pi = 3.1415926535900001;
+                //return 6378137 * 2 * pi/tileSize
+                return map.maxExtent.getWidth()/tileSize
             }
             
             var tiles_url = "http://localhost:8000/"
@@ -62,7 +67,8 @@
             var servers = [tiles_url+'a/',tiles_url+'b/',tiles_url+'c/']
 
             // Create an OSM-like tiling layer from a TileCache layer by overriding the 'getURL()'
-            // http://trac.openlayers.org/browser/trunk/openlayers/lib/OpenLayers/Layer/TileCache.js#L75           
+            // http://trac.openlayers.org/browser/trunk/openlayers/lib/OpenLayers/Layer/TileCache.js#L75
+            // http://trac.openlayers.org/ticket/1950         
             var tilelite_64 = new OpenLayers.Layer.TileCache("Tilelite - serving 64 pixel tiles", servers,
                     "dummy", // layername: unused but must be set
                         {   type: "png",
@@ -98,7 +104,19 @@
                         }
                     );
             
-                        
+            var wms = new OpenLayers.Layer.TileCache( "Sydney", 
+                    ['http://mapserver-tile-1.osgeo.org/tilecache',
+                    'http://mapserver-tile-2.osgeo.org/tilecache'],
+                    'osm',
+                    {
+                      maxExtent: new OpenLayers.Bounds(-20000000,-20000000,20000000,20000000),
+                      scales: [10000,25000,50000,100000,250000,500000,1000000,2500000,5000000,10000000],
+                      units: 'm',
+                      projection:new OpenLayers.Projection("EPSG:900913"),
+                      buffer:0,
+                      isBaselayer:true
+                    } );
+                                            
             // Alternate way of creating a tilelite layer -> borrow from the OSM layer contructor but repoint urls to localhost
             tilelite_layer = new OpenLayers.Layer.OSM.Mapnik("TileLite Server Layer from OSM Layer (256 px tiles)");
             tilelite_layer.url = servers;
@@ -109,7 +127,7 @@
             osm_official_tiles = new OpenLayers.Layer.OSM.Mapnik("OpenStreetMap (Mapnik)");
             osm_official_tiles.attribution = "Map Data CC-BY-SA Openstreetmap.org"
                                      
-            map.addLayers([tilelite_layer,osm_official_tiles,tilelite_64,tilelite_256,tilelite_512]);
+            map.addLayers([tilelite_layer,wms,osm_official_tiles,tilelite_64,tilelite_256,tilelite_512]);
             map.addControl(new OpenLayers.Control.Scale());
             map.addControl(new OpenLayers.Control.MousePosition());
             map.addControl(new OpenLayers.Control.Navigation()); 
@@ -119,11 +137,15 @@
             ls.maximizeControl();
             map.zoomToMaxExtent();
             //map.zoomToExtent(new OpenLayers.Bounds(-14301062.241481643,5702202.309052736,-12773544.668504298,6266001.829583203))
+            
+            map.events.register("moveend", map, getZoom);
+            map.events.register("zoomend", map, getZoom);
             }
     </script>
   </head>
   <body onload="init()">
      <h2 style="position:absolute; z-index:10000; left: 100px;">TileLite Mapnik Server</h2>
+     <h3 style="position:absolute; z-index:10000; bottom: 20px; left: 50px;" id="zoom">Zoom:</h3>
     <div id="map">
     </div>
   </body>
