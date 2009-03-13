@@ -1,0 +1,35 @@
+<html>
+  <head>
+    <title>TileLite Mapnik Server</title>
+    <script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key={your key here};sensor=false"></script>
+    <style type="text/css">
+    html, body { height: 100%;}
+    body {margin: 0px;}
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    </style>
+  </head>
+  <body>
+    <h2 style="position:absolute; z-index:1000; top: 30; left: 100px;"><a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite Mapnik Server</a></h2>
+    <div id="map">
+    </div>
+    <script type="text/javascript" defer="defer">
+              
+      var gmap = new GMap2(document.getElementById('map'));
+      gmap.addControl(new GSmallMapControl());
+
+      var osm = new GTileLayerOverlay(
+        new GTileLayer(null, null, null, {
+          tileUrlTemplate: 'http://localhost:8000/{Z}/{X}/{Y}.png',
+          isPng: true
+        })
+      );
+
+      gmap.setCenter(new GLatLng(0,0), 1);
+      gmap.addOverlay(osm);
+
+    </script>
+  </body>
+</html>
