@@ -5,7 +5,6 @@ __copyright__ = "Copyright 2009, Dane Springmeyer"
 __version__ = "0.1SVN"
 __license__ = "BSD"
 
-from os.path import getmtime
 from sys import stderr
 from time import sleep
 from urllib import unquote
@@ -15,7 +14,7 @@ from mapnik import Map, Image, Projection, Envelope, load_map, render
 
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
 
-CSS_STYLE = "font-family: 'Lucida Grande', Verdana,Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
+CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
 
 def parse_config(cfg_file):
     from ConfigParser import SafeConfigParser
@@ -78,7 +77,7 @@ class SphericalMercator(object):
         h = self.RAD_TO_DEG * ( 2 * atan(exp(g)) - 0.5 * pi)
         return (f,h)
 
-class WsgiServer(object):
+class Server(object):
     """
     """
     def __init__(self, mapfile, config=None, debug_prefix=True):    
@@ -88,7 +87,7 @@ class WsgiServer(object):
         self._prj = Projection(MERC_PROJ4)
         self._debug_prefix = debug_prefix
         self._changed = []
-        self._config = ''
+        self._config = config
         
         # mutable
         self.size = 256
@@ -97,41 +96,38 @@ class WsgiServer(object):
         self.paletted = False
         self.max_zoom = 18
         self.debug = True
-        self.watch_map = False
+        self.watch_mapfile = False
         self.watch_interval = 2
 
         self.caching = False
         self.cache_force = False
         self.cache_path = '/tmp'
 
-        if config:
-            self._config = config
-            self.aborb_options(parse_config(config))
+        if self._config:
+            self.aborb_options(parse_config(self._config))
 
         self._merc = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
         self._mapnik_map = Map(self.size,self.size)
         self._mapfile = mapfile
         self.load_mapfile(mapfile)
 
-        if self.watch_map:
-            self.last_modified = getmtime(self._mapfile)
+        if self.watch_mapfile:
+            self.modified = path.getmtime(self._mapfile)
             import thread
-            # todo: need to keep track of threads
             thread.start_new_thread(self.watcher, ())
                 
     def watcher(self):
         while 1:
-            if not self.last_modified == getmtime(self._mapfile):
+            if not self.modified == path.getmtime(self._mapfile):
                 self.load_mapfile(self._mapfile,reload=True)
                 self.msg('Mapfile **changed**, reloading %s' % self._mapfile)
-                self.last_modified = getmtime(self._mapfile)
+                self.modified = path.getmtime(self._mapfile)
             sleep(self.watch_interval)
+        return
     
     def load_mapfile(self,mapfile,reload=False):
         if reload:
-            try:
-                self._mapnik_map.remove_all()
-            except AttributeError: pass # only available in trunk
+            self._mapnik_map.remove_all()
         if mapfile.endswith('.xml'):
             load_map(self._mapnik_map, mapfile)
         elif mapfile.endswith('.mml'):

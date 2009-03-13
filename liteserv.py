@@ -66,8 +66,8 @@ if __name__ == '__main__':
     #httpd = simple_server.WSGIServer(http_setup, WSGIRequestHandler)
     #httpd.set_app(application)
 
-    from tilelite import WsgiServer
-    application = WsgiServer(mapfile, CONFIG, debug_prefix=False)
+    from tilelite import Server
+    application = Server(mapfile, CONFIG, debug_prefix=False)
     
     httpd = make_server(options.host, options.port, application)
     print "Listening on port %s..." % options.port
