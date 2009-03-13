@@ -99,6 +99,7 @@ class Server(object):
         self.debug = True
         self.watch_mapfile = False
         self.watch_interval = 2
+        self.max_failures = 0
 
         self.caching = False
         self.cache_force = False
@@ -118,24 +119,29 @@ class Server(object):
             thread.start_new_thread(self.watcher, ())
                 
     def watcher(self):
-        failed = False
+        failed = 0
         while 1:
             if not self.modified == path.getmtime(self._mapfile):
                 self._locked = True
                 sleep(self.watch_interval/2.0)
-                if not failed:
-                    self.msg('Mapfile **changed**, reloading... ')
+                self.msg('Mapfile **changed**, reloading... ')
                 try:
                     self.load_mapfile(self._mapfile,reload=True)
                     sleep(self.watch_interval)
                     self.msg('Mapfile successfuly reloaded from %s' % self._mapfile)
+                    failed = 0
                 except:
-                    failed = True
-                    sleep(self.watch_interval*2)
+                    failed += 1
+                    again = self.watch_interval*2
+                    self.msg('Failed to reload mapfile, will try again in %s seconds' % again)
+                    sleep(again)
                 self.modified = path.getmtime(self._mapfile)
                 self._locked = False
             else:
                 sleep(self.watch_interval)
+            if failed > self.max_failures:
+                self.msg('Giving up on mapfile change watching thread...')
+                break
         return
     
     def load_mapfile(self,mapfile,reload=False):
