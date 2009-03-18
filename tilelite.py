@@ -99,7 +99,7 @@ class Server(object):
         self.debug = True
         self.watch_mapfile = False
         self.watch_interval = 2
-        self.max_failures = 0
+        self.max_failures = 6
 
         self.caching = False
         self.cache_force = False
@@ -128,7 +128,7 @@ class Server(object):
                 try:
                     self.load_mapfile(self._mapfile,reload=True)
                     sleep(self.watch_interval)
-                    self.msg('Mapfile successfuly reloaded from %s' % self._mapfile)
+                    self.msg('Mapfile successfully reloaded from %s' % self._mapfile)
                     failed = 0
                 except:
                     failed += 1
