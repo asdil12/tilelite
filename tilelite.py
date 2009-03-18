@@ -10,7 +10,7 @@ from time import sleep
 from urllib import unquote
 from os import makedirs, path
 from math import pi, cos, sin, log, exp, atan
-from mapnik import Map, Image, Projection, Envelope, load_map, render
+from mapnik import Map, Image, Projection, Envelope, Color, load_map, render
 
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
 
@@ -113,10 +113,15 @@ class Server(object):
             self.aborb_options(parse_config(self._config))
 
         self._merc = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
-        self._mapnik_map = Map(self.size,self.size)
         self._mapfile = mapfile
-        self.load_mapfile(mapfile)
-
+        self._mapnik_map = Map(self.size,self.size)
+        if mapfile.endswith('.xml'):
+            load_map(self._mapnik_map, self._mapfile)
+        elif mapfile.endswith('.mml'):
+            from cascadenik import load_map as load_mml
+            load_mml(self._mapnik_map, self._mapfile)
+        self._mapnik_map.srs = MERC_PROJ4
+        
         if self.watch_mapfile:
             self.modified = path.getmtime(self._mapfile)
             import thread
@@ -130,14 +135,19 @@ class Server(object):
                 sleep(self.watch_interval/2.0)
                 self.msg('Mapfile **changed**, reloading... ')
                 try:
-                    self.load_mapfile(self._mapfile,reload=True)
-                    sleep(self.watch_interval)
+                    self._mapnik_map = Map(self.size,self.size)
+                    if self._mapfile.endswith('.xml'):
+                        load_map(self._mapnik_map, self._mapfile)
+                    elif self._mapfile.endswith('.mml'):
+                        from cascadenik import load_map as load_mml
+                        load_mml(self._mapnik_map, self._mapfile)
+                    self._mapnik_map.srs = MERC_PROJ4
                     self.msg('Mapfile successfully reloaded from %s' % self._mapfile)
                     failed = 0
-                except:
+                except Exception, E:
                     failed += 1
                     again = self.watch_interval*2
-                    self.msg('Failed to reload mapfile, will try again in %s seconds' % again)
+                    self.msg('Failed to reload mapfile, will try again in %s seconds:\n%s' % (again,E))
                     sleep(again)
                 self.modified = path.getmtime(self._mapfile)
                 self._locked = False
@@ -148,16 +158,6 @@ class Server(object):
                 break
         return
     
-    def load_mapfile(self,mapfile,reload=False):
-        if reload:
-            self._mapnik_map.remove_all()
-        if mapfile.endswith('.xml'):
-            load_map(self._mapnik_map, mapfile)
-        elif mapfile.endswith('.mml'):
-            from cascadenik import load_map as load_mml
-            load_mml(self._mapnik_map, mapfile)
-        self._mapnik_map.srs = MERC_PROJ4
-
     def msg(self,message):
         """ WSGI apps must not print to stdout.
         """
@@ -299,13 +299,15 @@ class Server(object):
                 bitbucket.org/springmeyer/tilelite/</a></p></div>
                 ''' % {'root': root,'style':CSS_STYLE}
                 mime_type = 'text/html'
-            
-            response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
-            start_response("200 OK",response_headers)
-            yield response
-        else:    
-            start_response("404 Not Found", [('content-type', 'text/html')])
-            yield 'Not Found'
+        else:
+            mime_type = 'image/%s' % self.format
+            im = Image(self.size,self.size)
+            im.background = Color('pink')
+            response = im.tostring(self.format)
+                        
+        response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
+        start_response("200 OK",response_headers)
+        yield response
 
 if __name__ == '__main__':
     import doctest
