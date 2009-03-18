@@ -27,6 +27,10 @@ def parse_config(cfg_file):
             params[param[0]] = param[1]
     return params
 
+def parse_query(qs):
+    query = dict([i.split('=') for i in unquote(qs).split('&')])
+    return query
+
 def is_image_request(path_info):
     if path_info.endswith('.png') | path_info.endswith('.jpeg'):
         return True
@@ -179,6 +183,22 @@ class Server(object):
                 settings[k] = v
         return settings
 
+    def instance_dict(self):
+        d = {}
+        m = self._mapnik_map
+        m.zoom_all()
+        e = m.envelope()
+        c = e.center()
+        e2 = e.inverse(self._prj)
+        c2 = e2.center()
+        d['extent'] = [e.minx,e.miny,e.maxx,e.maxy]
+        d['center'] = [c.x,c.y]
+        d['lonlat_extent'] = [e2.minx,e2.miny,e2.maxx,e2.maxy]
+        d['lonlat_center'] = [c2.x,c2.y]        
+        d['layers'] = [l.name for l in m.layers]
+        d['mapfile'] = self._mapfile
+        return d
+        
     def aborb_options(self,opts):
         """
         """
@@ -215,6 +235,9 @@ class Server(object):
         """
         if not self._locked:
             path_info = environ['PATH_INFO']
+            qs = environ['QUERY_STRING']
+            if qs:
+                query = parse_query(qs)
             if is_image_request(path_info):
                 uri, self.format = path_info.split('.')
                 zoom,x,y = map(int,uri.split('/')[-3:])
@@ -258,6 +281,13 @@ class Server(object):
             elif path_info.endswith('settings.json'):
                 response = str(self.settings_dict())
                 mime_type = 'text/plain'        
+            elif path_info.endswith('instance.json'):
+                if 'jsoncallback' in query:
+                    response = ('%s(%s);' % (query['jsoncallback'], self.instance_dict()))
+                    mime_type = 'application/json'
+                else:
+                    response = str(self.instance_dict())
+                    mime_type = 'text/plain'
             else:
                 root = '%s%s' % (environ['SCRIPT_NAME'], path_info.strip('/'))
                 response = '''<h2>TileLite</h2>
