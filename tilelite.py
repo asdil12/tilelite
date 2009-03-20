@@ -207,8 +207,6 @@ class Server(object):
             if hasattr(self,attr) and not attr.startswith('_'):
                 cur = getattr(self,attr)
                 new = match(cur,opt[1])
-                if new is None:
-                    import pdb;pdb.set_trace()
                 if not new == cur:
                     setattr(self,attr,new)
                     self._changed.append(attr)
