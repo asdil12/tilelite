@@ -303,6 +303,7 @@ class Server(object):
             im.background = Color('pink')
             response = im.tostring(self.format)
                         
+        self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
         response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
         start_response("200 OK",response_headers)
         yield response
