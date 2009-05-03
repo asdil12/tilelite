@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-__author__ = "Dane Springmeyer (dbsgeo [ -a- ] gmail.com)"
-__copyright__ = "Copyright 2009, Dane Springmeyer"
-__version__ = "0.1.0"
-__license__ = "BSD"
+__author__ = 'Dane Springmeyer (dbsgeo [ -a- ] gmail.com)'
+__copyright__ = 'Copyright 2009, Dane Springmeyer'
+__version__ = '0.1.0'
+__license__ = 'BSD'
 
 from sys import stderr
 from time import sleep
