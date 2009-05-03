@@ -48,10 +48,12 @@ def append_local_dir():
 
 # put local tilelite on PYTHONPATH
 # only needed if you have not already installed in site-packages
-
-append_local_dir()
+#append_local_dir()
 
 from tilelite import Server
 
+# point at your mapnik xml or cascadenik mml...
+mapfile = '/home/mapnik/osm.xml'
+config = None
 # note: this variable must be called 'application'
-application = Server('/Users/spring/projects/tilelite/demo/style.mml')
+application = Server(mapfile,config)
