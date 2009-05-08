@@ -37,7 +37,7 @@ def is_image_request(path_info):
     return False
 
 def match(attr,value):
-    if isinstance(attr,bool) and value.lower() in ['on','yes','y','true']:
+    if isinstance(attr,bool) and str(value).lower() in ['on','yes','y','true']:
         return True
     elif isinstance(attr,bool):
         return False
@@ -84,12 +84,11 @@ class SphericalMercator(object):
 class Server(object):
     """
     """
-    def __init__(self, mapfile, config=None, debug_prefix=True):    
+    def __init__(self, mapfile, config=None):    
         """
         """
         # private
         self._prj = Projection(MERC_PROJ4)
-        self._debug_prefix = debug_prefix
         self._changed = []
         self._config = config
         self._locked = False
@@ -110,7 +109,7 @@ class Server(object):
         self.cache_path = '/tmp'
 
         if self._config:
-            self.aborb_options(parse_config(self._config))
+            self.absorb_options(parse_config(self._config))
 
         self._merc = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
         self._mapfile = mapfile
@@ -162,10 +161,7 @@ class Server(object):
         """ WSGI apps must not print to stdout.
         """
         if self.debug:
-            if not self._debug_prefix:
-                print >> stderr, '%s' % message
-            else:
-                print >> stderr, '[TileLite Debug] --> %s' % message
+            print >> stderr, '[TileLite Debug] --> %s' % message
 
     def settings(self):
         settings = ''
@@ -199,7 +195,7 @@ class Server(object):
         d['mapfile'] = self._mapfile
         return d
         
-    def aborb_options(self,opts):
+    def absorb_options(self,opts):
         """
         """
         for opt in opts.items():
@@ -267,7 +263,7 @@ class Server(object):
                 else:
                     response = im.tostring(self.format)
                 mime_type = 'image/%s' % self.format
-                self.msg('X, Y, Zoom: %s,%s,%s' % (x,y,zoom))
+                self.msg('Zoom,X,Y: %s,%s,%s' % (zoom,x,y))
             elif path_info.endswith('settings/'):
                 response = '<h2>TileLite Settings</h2>'
                 response += '<pre style="%s">%s</pre>' % (CSS_STYLE,self.settings())
@@ -303,7 +299,7 @@ class Server(object):
             im.background = Color('pink')
             response = im.tostring(self.format)
                         
-        self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
+        #self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
         response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
         start_response("200 OK",response_headers)
         yield response

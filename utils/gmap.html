@@ -40,7 +40,6 @@
           $.getJSON( tiles_url + "instance.json?jsoncallback=?",
             function(data){
               var e = data.lonlat_extent;
-              console.log(e);
               var bounds = new GLatLngBounds(new GLatLng(e[1],e[0]),new GLatLng(e[3],e[2]));
               gmap.setZoom(gmap.getBoundsZoomLevel(bounds));
               gmap.setCenter(bounds.getCenter());
