@@ -16,7 +16,6 @@
 <script type="text/javascript" src="local_js/jquery.min.js"></script>-->
 
 <script src="http://dev.openlayers.org/nightly/OpenLayers.js"></script>
-<script src="http://openstreetmap.org/openlayers/OpenStreetMap.js"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js"></script>
 <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key="></script>
 
@@ -75,13 +74,13 @@
             }
             
             
-            var tiles_url = "http://localhost:8000/"
-           // var tiles_url = "http://dbsgeo.com:9000/"
-            
+            var tiles_url = "http://localhost:8000/"            
            
             // Note this is an openlayers/browser trick for pointing to multiple urls for speed,
             // TileLite just happens to work with it out of the box since it ignores any url prefix
             var servers = [tiles_url+'a/',tiles_url+'b/',tiles_url+'c/']
+            
+            var xyz_servers = [tiles_url+'a/${z}/${x}/${y}.png',tiles_url+'b/${z}/${x}/${y}.png',tiles_url+'c/${z}/${x}/${y}.png']
 
             // Create an OSM-like tiling layer from a TileCache layer by overriding the 'getURL()'
             // http://trac.openlayers.org/browser/trunk/openlayers/lib/OpenLayers/Layer/TileCache.js#L75
@@ -137,15 +136,17 @@
             */
                                             
             // Alternate way of creating a tilelite layer -> borrow from the OSM layer contructor but repoint urls to localhost
-            tilelite_layer = new OpenLayers.Layer.OSM.Mapnik("TileLite Server Layer from OSM Layer (256 px tiles)");
-            tilelite_layer.url = servers;
+            //new OpenLayers.Layer.Google( "Google Terrain", {type: G_PHYSICAL_MAP, 'sphericalMercator': true} );
+            tilelite_layer = new OpenLayers.Layer.OSM("TileLite Server Layer from OSM Layer (256 px tiles)");
+            tilelite_layer.url = xyz_servers;
+            //tilelite_layer.sphericalMercator = true;
             tilelite_layer.buffer = 0;
             tilelite_layer.attribution = "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>"
             //tilelite_layer.setIsBaseLayer(false);
             //tilelite_layer.transitionEffect = null;
             
             // Uses linked OpenStreetMap.js from openstreetmap as a comparison layer
-            osm_official_tiles = new OpenLayers.Layer.OSM.Mapnik("OpenStreetMap (Mapnik)");
+            osm_official_tiles = new OpenLayers.Layer.OSM("OpenStreetMap (Mapnik)");
             osm_official_tiles.attribution = "Map Data CC-BY-SA Openstreetmap.org"
                                      
             map.addLayers([tilelite_layer,osm_official_tiles,tilelite_64,tilelite_256,tilelite_512]);
