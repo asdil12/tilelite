@@ -214,10 +214,10 @@ class Server(object):
         minx,miny = self._merc.fromPixelToLL((x*self.size,(y+1)*self.size),zoom)
         maxx,maxy = self._merc.fromPixelToLL(((x+1)*self.size, y*self.size),zoom)
         lonlat_bbox = Envelope(minx,miny,maxx,maxy)
-        if hasattr(e,'forward'):
+        if hasattr(lonlat_bbox,'forward'):
             return lonlat_bbox.forward(self._prj)
         else:
-            return Projection(self._prj).forward(lonlat_bbox)
+            return self._prj.forward(lonlat_bbox)
             
 
     def ready_cache(self,path_to_check):
