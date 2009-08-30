@@ -290,12 +290,12 @@ class Server(object):
                 response = '''<h2>TileLite</h2>
                 <div style="%(style)s"><p>Make a tile request in the format of %(root)s/zoom/x/y.png</p>
                 <p>url: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
-                <p>js: var tiles = new OpenLayers.Layer.OSM("Mapnik", "http://%(host)s:%(port)s/${z}/${x}/${y}.png");</p>
+                <p>js: var tiles = new OpenLayers.Layer.OSM("Mapnik", "http://%(http_host)s/${z}/${x}/${y}.png");</p>
                 <p>See TileLite settings: <a href="%(root)s/settings/">%(root)s/settings/</a>
                 | <a href="%(root)s/settings.json">%(root)s/settings.json</a></p>
                 <p> More info: <a href="http://bitbucket.org/springmeyer/tilelite/">
                 bitbucket.org/springmeyer/tilelite/</a></p></div>
-                ''' % {'root': root,'style':CSS_STYLE,'host':environ['REMOTE_HOST'],'port':environ['SERVER_PORT']}
+                ''' % {'root': root,'style':CSS_STYLE,'http_host':environ['HTTP_HOST']}
                 mime_type = 'text/html'
         else:
             mime_type = 'image/%s' % self.format
