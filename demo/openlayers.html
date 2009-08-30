@@ -44,7 +44,7 @@
             // TileLite by default mounts on localhost port 8000 
             var tiles_url = "http://localhost:8000/"            
            
-            var tilelite_layer = new OpenLayers.Layer.OSM("Mapnik Layer", 'http://localhost:8000/${z}/${x}/${y}.png');
+            var tilelite_layer = new OpenLayers.Layer.OSM("Mapnik Layer", tiles_url + '${z}/${x}/${y}.png');
             
             tilelite_layer.attribution = "Data served by <a href='http://bitbucket.org/springmeyer/tilelite/'>TileLite </a>"
 
