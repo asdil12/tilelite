@@ -12,8 +12,8 @@ parser = OptionParser(usage="""
     python liteserv.py <mapfile.xml> [options]
     """)
 
-parser.add_option('-n', '--name', default='localhost', dest='host',
-    help='Specify a host name (defaults to localhost)'
+parser.add_option('-i', '--ip', default='0.0.0.0', dest='host',
+    help='Specify a ip to listen on (defaults to 0.0.0.0/localhost)'
     )
 
 parser.add_option('-p', '--port', default=8000, dest='port', type='int',
@@ -122,7 +122,9 @@ if __name__ == '__main__':
     application.absorb_options(strip_opts(options.__dict__))
     
     httpd = make_server(options.host, options.port, application)
-    print "Listening on port %s..." % options.port
+    print "Listening on %s:%s...\n" % (options.host,options.port)
+    print "If you are running locally view in your browser: 'http://localhost:%s'" % options.port
+    print "Otherwise go to: 'http://yourserver.com:%s'" % options.port
     if not application.debug:
         print 'TileLite debug mode is *off*...'
     
