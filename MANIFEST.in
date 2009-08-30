@@ -4,7 +4,7 @@ include INSTALL.txt
 include LICENSE.txt
 include MANIFEST.in
 include README.txt
-recursive-include docs*
-recursive-include utils*
-recursive-include demo*
+recursive-include docs *
+recursive-include utils *
+recursive-include demo *
 
