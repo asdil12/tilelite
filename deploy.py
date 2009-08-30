@@ -32,7 +32,7 @@ def call(cmd):
     sys.exit(E)
 
 def cleanup():
-    call('sudo rm *.egg* *.pyc dist/ build/ -r -f')
+    call('sudo rm -rf *.egg* *.pyc dist/ build/')
 
 def tag():
     call('hg tag -u springmeyer %s -m "tag %s release" ' % (version,version))

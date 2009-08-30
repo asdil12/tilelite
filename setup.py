@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-version = '0.1.0'
+version = '0.1.1'
 app = 'tilelite'
 description = 'Lightweight WSGI tile-server, written in Python, using Mapnik rendering and designed to serve tiles in the OSM/Google scheme.'
 url = 'http://bitbucket.org/springmeyer/%s/' % app

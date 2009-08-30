@@ -1,7 +1,14 @@
-Changelog
----------
+TileLite Changelog
+------------------
+
+Version 0.1.1, August 30 2009:
+------------------------------  
+
+  * Added a 'demo' directory with sample shp, mapnik xml, and html
+
+  * Enabled support for Mapnik 0.5.1 (Previously only worked with >= 0.6.0)
 
 Version 0.1.0, May 3rd 2009:
 ----------------------------
 
- Tagged first release.
+ * Tagged first release.
