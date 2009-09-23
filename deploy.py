@@ -42,7 +42,8 @@ def upload():
 
 def main():
     cleanup()
-    tag()
+    # not working yet..
+    #tag()
     upload()
     cleanup()
     

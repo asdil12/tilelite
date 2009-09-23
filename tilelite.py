@@ -185,6 +185,10 @@ class Server(object):
         m.zoom_all()
         e = m.envelope()
         c = e.center()
+        if hasattr(e,'inverse'):
+            e2 = e.inverse(self._prj)
+        else:
+            e2 = e.inverse(self._prj.inverse(e))
         e2 = e.inverse(self._prj)
         c2 = e2.center()
         d['extent'] = [e.minx,e.miny,e.maxx,e.maxy]
