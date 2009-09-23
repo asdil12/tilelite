@@ -188,7 +188,7 @@ class Server(object):
         if hasattr(e,'inverse'):
             e2 = e.inverse(self._prj)
         else:
-            e2 = e.inverse(self._prj.inverse(e))
+            e2 = self._prj.inverse(e)
         e2 = e.inverse(self._prj)
         c2 = e2.center()
         d['extent'] = [e.minx,e.miny,e.maxx,e.maxy]
