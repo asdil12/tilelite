@@ -35,15 +35,14 @@ def cleanup():
     call('sudo rm -rf *.egg* *.pyc dist/ build/')
 
 def tag():
-    call('hg tag -u springmeyer %s -m "tag %s release" ' % (version,version))
+    call('hg tag -u springmeyer -m "tagging the %s release" %s ' % (version,version))
 
 def upload():
     call('python setup.py sdist upload')
 
 def main():
     cleanup()
-    # not working yet..
-    #tag()
+    tag()
     upload()
     cleanup()
     
