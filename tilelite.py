@@ -236,9 +236,11 @@ class Server(object):
     def __call__(self, environ, start_response):
         """
         """
+        response_status = "200 OK"
+        mime_type = 'text/html'
         if not self._locked:
             path_info = environ['PATH_INFO']
-            qs = environ['QUERY_STRING']
+            qs = environ['QUERY_STRING']    
             if qs:
                 query = parse_query(qs)
             if is_image_request(path_info):
@@ -280,7 +282,6 @@ class Server(object):
                     response += '<h4>From: %s</h4>' % self._config
                 else:
                     response += '<h4>*default settings*</h4>'
-                mime_type = 'text/html'
             elif path_info.endswith('settings.json'):
                 response = str(self.settings_dict())
                 mime_type = 'text/plain'        
@@ -302,12 +303,9 @@ class Server(object):
                 <p> More info: <a href="http://bitbucket.org/springmeyer/tilelite/">
                 bitbucket.org/springmeyer/tilelite/</a></p></div>
                 ''' % {'root': root,'style':CSS_STYLE,'http_host':environ['HTTP_HOST']}
-                mime_type = 'text/html'
             else:
                 response = '<h1> Page Not found </h1>'
-                response_headers = [('Content-Type', 'text/html'),('Content-Length', str(len(response)))]
-                start_response("404 Not Found",response_headers)
-                yield response
+                response_status = "404 Not Found"
         else:
             mime_type = 'image/%s' % self.format
             im = Image(self.size,self.size)
@@ -316,7 +314,7 @@ class Server(object):
                         
         #self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
         response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
-        start_response("200 OK",response_headers)
+        start_response(response_status,response_headers)
         yield response
 
 if __name__ == '__main__':
