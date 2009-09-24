@@ -188,6 +188,7 @@ class Server(object):
         if hasattr(e,'inverse'):
             e2 = e.inverse(self._prj)
         else:
+            # pre mapnik 0.6.x
             e2 = self._prj.inverse(e)
 
         c2 = e2.center()
@@ -221,6 +222,7 @@ class Server(object):
         if hasattr(lonlat_bbox,'forward'):
             return lonlat_bbox.forward(self._prj)
         else:
+            # pre mapnik 0.6.x
             return self._prj.forward(lonlat_bbox)
             
 
@@ -289,10 +291,10 @@ class Server(object):
                 else:
                     response = str(self.instance_dict())
                     mime_type = 'text/plain'
-            else:
+            elif not path_info.strip('/'):
                 root = '%s%s' % (environ['SCRIPT_NAME'], path_info.strip('/'))
                 response = '''<h2>TileLite</h2>
-                <div style="%(style)s"><p>Make a tile request in the format of %(root)s/zoom/x/y.png</p>
+                <div style="%(style)s"><p>Welcome, ready to accept a tile request in the format of %(root)s/zoom/x/y.png</p>
                 <p>url: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
                 <p>js: var tiles = new OpenLayers.Layer.OSM("Mapnik", "http://%(http_host)s/${z}/${x}/${y}.png");</p>
                 <p>See TileLite settings: <a href="%(root)s/settings/">%(root)s/settings/</a>
@@ -301,6 +303,11 @@ class Server(object):
                 bitbucket.org/springmeyer/tilelite/</a></p></div>
                 ''' % {'root': root,'style':CSS_STYLE,'http_host':environ['HTTP_HOST']}
                 mime_type = 'text/html'
+            else:
+                response = '<h1> Page Not found </h1>'
+                response_headers = [('Content-Type', 'text/html'),('Content-Length', str(len(response)))]
+                start_response("404 Not Found",response_headers)
+                yield response
         else:
             mime_type = 'image/%s' % self.format
             im = Image(self.size,self.size)
