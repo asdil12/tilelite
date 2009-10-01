@@ -2,6 +2,7 @@
 
 import os
 import sys
+import socket
 from optparse import OptionParser
 from wsgiref.simple_server import make_server, WSGIServer, WSGIRequestHandler
 
@@ -88,11 +89,11 @@ if __name__ == '__main__':
         if not os.path.exists(mapfile):
             sys.exit('Could not locate mapfile.')
     
-    print "Using mapfile: '%s'" % os.path.abspath(mapfile)
+    print "[TileLite Debug] --> Using mapfile: '%s'" % os.path.abspath(mapfile)
         
     if options.config:
         if not os.path.isfile(options.config):
-            sys.exit('That does not appear to be a config file')
+            sys.exit('That does not appear to be a valid config file')
         else:
             CONFIG = options.config
 
@@ -103,16 +104,15 @@ if __name__ == '__main__':
             CONFIG = None
     
     if CONFIG:
-        print "Using config file: '%s'" % os.path.abspath(CONFIG)        
+        print "[TileLite Debug] --> Using config file: '%s'" % os.path.abspath(CONFIG)        
 
-    
     if options.cache_path and not options.caching:
         options.caching = True
 
     if options.cache_force and not options.caching:
         options.caching = True
 
-        #parser.error("Caching must be turned on with '--caching' flag for liteserv.py to accept '--cache-path' option")
+    #parser.error("Caching must be turned on with '--caching' flag for liteserv.py to accept '--cache-path' option")
     #http_setup = options.host, options.port
     #httpd = simple_server.WSGIServer(http_setup, WSGIRequestHandler)
     #httpd.set_app(application)
@@ -122,9 +122,12 @@ if __name__ == '__main__':
     application.absorb_options(strip_opts(options.__dict__))
     
     httpd = make_server(options.host, options.port, application)
-    print "Listening on %s:%s...\n" % (options.host,options.port)
-    print "If you are running locally view in your browser: 'http://localhost:%s'" % options.port
-    print "Otherwise go to: 'http://yourserver.com:%s'" % options.port
+    print "Listening on %s:%s..." % (options.host,options.port)
+    print "To access locally view: http://localhost:%s" % options.port
+    remote = "To access remotely view: http://%s" % socket.gethostname()
+    if not options.port == 80:
+        remote += ":%s" % options.port
+    print remote
     if not application.debug:
         print 'TileLite debug mode is *off*...'
     

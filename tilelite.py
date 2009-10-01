@@ -5,14 +5,18 @@ __copyright__ = 'Copyright 2009, Dane Springmeyer'
 __version__ = '0.1.3'
 __license__ = 'BSD'
 
-from sys import stderr
-from time import sleep
-from urllib import unquote
-from os import makedirs, path
-from math import pi, cos, sin, log, exp, atan
-from mapnik import Map, Image, Projection, Envelope, Color, load_map, render
+import os
+import sys
+import time
+import math
+import webob
+import mapnik
+import urllib
+import tempfile
+
 
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
+mercator = mapnik.Projection(MERC_PROJ4)
 
 CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
 
@@ -28,7 +32,7 @@ def parse_config(cfg_file):
     return params
 
 def parse_query(qs):
-    query = dict([i.split('=') for i in unquote(qs).split('&')])
+    query = dict([i.split('=') for i in urllib.unquote(qs).split('&')])
     return query
 
 def is_image_request(path_info):
@@ -55,40 +59,61 @@ class SphericalMercator(object):
     Originally from:  
       http://svn.openstreetmap.org/applications/rendering/mapnik/generate_tiles.py
     """
-    def __init__(self,levels=18,tilesize=256):
+    def __init__(self,levels=18,size=256):
         self.Bc = []
         self.Cc = []
         self.zc = []
         self.Ac = []
-        self.DEG_TO_RAD = pi/180
-        self.RAD_TO_DEG = 180/pi
-        c = tilesize
+        self.DEG_TO_RAD = math.pi/180
+        self.RAD_TO_DEG = 180/math.pi
+        self.cache = {}
+        self.size = size
         for d in range(0,levels):
-            e = c/2;
-            self.Bc.append(c/360.0)
-            self.Cc.append(c/(2 * pi))
+            e = size/2.0;
+            self.Bc.append(size/360.0)
+            self.Cc.append(size/(2.0 * math.pi))
             self.zc.append((e,e))
-            self.Ac.append(c)
-            c *= 2
-     
-    def fromPixelToLL(self,px,zoom):
-        """
-        Convert from URL pixel scheme to mercator bbox.
-        """
+            self.Ac.append(size)
+            size *= 2.0
+
+    @classmethod
+    def minmax(a,b,c):
+        a = max(a,b)
+        a = min(a,c)
+        return a
+
+    def ll_to_px(self,px,zoom):
+        d = self.zc[zoom]
+        e = round(d[0] + px[0] * self.Bc[zoom])
+        f = self.minmax(math.sin(DEG_TO_RAD * px[1]),-0.9999,0.9999)
+        g = round(d[1] + 0.5 * math.log((1+f)/(1-f))*-self.Cc[zoom])
+        return (e,g)
+    
+    def px_to_ll(self,px,zoom):
+        """ Convert pixel postion to LatLong (EPSG:4326) """
         e = self.zc[zoom]
         f = (px[0] - e[0])/self.Bc[zoom]
         g = (px[1] - e[1])/-self.Cc[zoom]
-        h = self.RAD_TO_DEG * ( 2 * atan(exp(g)) - 0.5 * pi)
+        h = self.RAD_TO_DEG * ( 2 * math.atan(math.exp(g)) - 0.5 * math.pi)
         return (f,h)
-
+    
+    def xyz_to_envelope(self,x,y,zoom):
+        """ Convert XYZ to mapnik.Envelope """
+        #e_id = '%s-%s-%s' % (x,y,zoom)
+        #if e_id in self.cache:
+        #    return self.cache[e_id]
+        ll = (x * self.size,(y + 1) * self.size)
+        ur = ((x + 1) * self.size, y * self.size)
+        minx,miny = self.px_to_ll(ll,zoom)
+        maxx,maxy = self.px_to_ll(ur,zoom)
+        lonlat_bbox = mapnik.Envelope(minx,miny,maxx,maxy)
+        env = mercator.forward(lonlat_bbox)
+        #self.cache[e_id] = env
+        return env
+        
 class Server(object):
-    """
-    """
-    def __init__(self, mapfile, config=None):    
-        """
-        """
+    def __init__(self, mapfile, config=None):
         # private
-        self._prj = Projection(MERC_PROJ4)
         self._changed = []
         self._config = config
         self._locked = False
@@ -106,32 +131,32 @@ class Server(object):
 
         self.caching = False
         self.cache_force = False
-        self.cache_path = '/tmp'
+        self.cache_path = '/tmp' #tempfile.gettempdir()
 
         if self._config:
             self.absorb_options(parse_config(self._config))
 
-        self._merc = SphericalMercator(levels=self.max_zoom+1,tilesize=self.size)
+        self._merc = SphericalMercator(levels=self.max_zoom+1,size=self.size)
         self._mapfile = mapfile
-        self._mapnik_map = Map(self.size,self.size)
+        self._mapnik_map = mapnik.Map(self.size,self.size)
         if mapfile.endswith('.xml'):
-            load_map(self._mapnik_map, self._mapfile)
+            mapnik.load_map(self._mapnik_map, self._mapfile)
         elif mapfile.endswith('.mml'):
             from cascadenik import load_map as load_mml
             load_mml(self._mapnik_map, self._mapfile)
         self._mapnik_map.srs = MERC_PROJ4
         
         if self.watch_mapfile:
-            self.modified = path.getmtime(self._mapfile)
+            self.modified = os.path.getmtime(self._mapfile)
             import thread
             thread.start_new_thread(self.watcher, ())
                 
     def watcher(self):
         failed = 0
         while 1:
-            if not self.modified == path.getmtime(self._mapfile):
+            if not self.modified == os.path.getmtime(self._mapfile):
                 self._locked = True
-                sleep(self.watch_interval/2.0)
+                time.sleep(self.watch_interval/2.0)
                 self.msg('Mapfile **changed**, reloading... ')
                 try:
                     self._mapnik_map = Map(self.size,self.size)
@@ -147,11 +172,11 @@ class Server(object):
                     failed += 1
                     again = self.watch_interval*2
                     self.msg('Failed to reload mapfile, will try again in %s seconds:\n%s' % (again,E))
-                    sleep(again)
-                self.modified = path.getmtime(self._mapfile)
+                    time.sleep(again)
+                self.modified = os.path.getmtime(self._mapfile)
                 self._locked = False
             else:
-                sleep(self.watch_interval)
+                time.sleep(self.watch_interval)
             if failed > self.max_failures:
                 self.msg('Giving up on mapfile change watching thread...')
                 break
@@ -161,10 +186,10 @@ class Server(object):
         """ WSGI apps must not print to stdout.
         """
         if self.debug:
-            print >> stderr, '[TileLite Debug] --> %s' % message
+            print >> sys.stderr, '[TileLite Debug] --> %s' % message
 
     def settings(self):
-        settings = ''
+        settings = '\n'
         for k,v in self.__dict__.items():
             if not k.startswith('_'):
                 if k in self._changed:
@@ -185,12 +210,7 @@ class Server(object):
         m.zoom_all()
         e = m.envelope()
         c = e.center()
-        if hasattr(e,'inverse'):
-            e2 = e.inverse(self._prj)
-        else:
-            # pre mapnik 0.6.x
-            e2 = self._prj.inverse(e)
-
+        e2 = mercator.inverse(e)
         c2 = e2.center()
         d['extent'] = [e.minx,e.miny,e.maxx,e.maxy]
         d['center'] = [c.x,c.y]
@@ -213,29 +233,15 @@ class Server(object):
                     self._changed.append(attr)
         self.msg(self.settings())
 
-    def forward_bbox(self,x,y,zoom):
-        """
-        """
-        minx,miny = self._merc.fromPixelToLL((x*self.size,(y+1)*self.size),zoom)
-        maxx,maxy = self._merc.fromPixelToLL(((x+1)*self.size, y*self.size),zoom)
-        lonlat_bbox = Envelope(minx,miny,maxx,maxy)
-        if hasattr(lonlat_bbox,'forward'):
-            return lonlat_bbox.forward(self._prj)
-        else:
-            # pre mapnik 0.6.x
-            return self._prj.forward(lonlat_bbox)
-            
-
     def ready_cache(self,path_to_check):
         """
         """
-        dirname = path.dirname(path_to_check)
-        if not path.exists(dirname):
-            makedirs(dirname)
+        dirname = os.path.dirname(path_to_check)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         
     def __call__(self, environ, start_response):
-        """
-        """
+        """ WSGI request handler """
         response_status = "200 OK"
         mime_type = 'text/html'
         if not self._locked:
@@ -246,29 +252,29 @@ class Server(object):
             if is_image_request(path_info):
                 uri, self.format = path_info.split('.')
                 zoom,x,y = map(int,uri.split('/')[-3:])
-                im = Image(self.size,self.size)
+                im = mapnik.Image(self.size,self.size)
                 if self.caching:
-                    tile_cache_path = '%s/%s/%s/%s.%s' % (self.cache_path,zoom,x,y,self.format)
-                    if self.cache_force or not path.exists(tile_cache_path):
-                        envelope = self.forward_bbox(x,y,zoom)
+                    tile_dir = os.path.join(self.cache_path,str(zoom),str(x),'%s.%s' % (str(y),self.format) )
+                    if self.cache_force or not os.path.exists(tile_dir):
+                        envelope = self._merc.xyz_to_envelope(x,y,zoom)
                         self._mapnik_map.zoom_to_box(envelope)
                         self._mapnik_map.buffer_size = self.buffer_size
-                        render(self._mapnik_map,im)
-                        self.ready_cache(tile_cache_path)
+                        mapnik.render(self._mapnik_map,im)
+                        self.ready_cache(tile_dir)
                         if self.paletted:
-                            im.save(tile_cache_path,'png256')
+                            im.save(tile_dir,'png256')
                         else:
-                            im.save(tile_cache_path)
-                        self.msg('saving...%s' % tile_cache_path)
+                            im.save(tile_dir)
+                        self.msg('saving...%s' % tile_dir)
                     elif self.caching:
                         # todo: benchmark opening without using mapnik...
-                        im = im.open(tile_cache_path)
+                        im = im.open(tile_dir)
                         self.msg('cache hit!')
                 else:
-                    envelope = self.forward_bbox(x,y,zoom)
+                    envelope = self._merc.xyz_to_envelope(x,y,zoom)
                     self._mapnik_map.zoom_to_box(envelope)
                     self._mapnik_map.buffer_size = self.buffer_size
-                    render(self._mapnik_map,im)
+                    mapnik.render(self._mapnik_map,im)
                 if self.paletted:
                     response = im.tostring('png256')
                 else:
@@ -308,8 +314,8 @@ class Server(object):
                 response_status = "404 Not Found"
         else:
             mime_type = 'image/%s' % self.format
-            im = Image(self.size,self.size)
-            im.background = Color('pink')
+            im = mapnik.Image(self.size,self.size)
+            im.background = mapnik.Color('pink')
             response = im.tostring(self.format)
                         
         #self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
