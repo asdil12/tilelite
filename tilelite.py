@@ -149,6 +149,8 @@ class Server(object):
             self.modified = os.path.getmtime(self._mapfile)
             import thread
             thread.start_new_thread(self.watcher, ())
+        self._mapnik_map.zoom_all()
+        self.envelope = self._mapnik_map.envelope()
                 
     def watcher(self):
         failed = 0
@@ -238,7 +240,10 @@ class Server(object):
         dirname = os.path.dirname(path_to_check)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        
+
+    def hit(self,env):
+        return self.envelope.intersects(env)
+      
     def __call__(self, environ, start_response):
         """ WSGI request handler """
         response_status = "200 OK"
@@ -256,9 +261,13 @@ class Server(object):
                     tile_dir = os.path.join(self.cache_path,str(zoom),str(x),'%s.%s' % (str(y),self.format) )
                     if self.cache_force or not os.path.exists(tile_dir):
                         envelope = self._merc.xyz_to_envelope(x,y,zoom)
-                        self._mapnik_map.zoom_to_box(envelope)
-                        self._mapnik_map.buffer_size = self.buffer_size
-                        mapnik.render(self._mapnik_map,im)
+                        if self.hit(envelope): # skip rendering and ds query if tile will be blank
+                            self._mapnik_map.zoom_to_box(envelope)
+                            self._mapnik_map.buffer_size = self.buffer_size
+                            mapnik.render(self._mapnik_map,im)
+                        else:
+                            # respect map background for blank tiles
+                            im.background = self._mapnik_map.background
                         self.ready_cache(tile_dir)
                         if self.paletted:
                             im.save(tile_dir,'png256')
@@ -271,9 +280,13 @@ class Server(object):
                         self.msg('cache hit!')
                 else:
                     envelope = self._merc.xyz_to_envelope(x,y,zoom)
-                    self._mapnik_map.zoom_to_box(envelope)
-                    self._mapnik_map.buffer_size = self.buffer_size
-                    mapnik.render(self._mapnik_map,im)
+                    if self.hit(envelope): # skip rendering and ds query if tile will be blank
+                        self._mapnik_map.zoom_to_box(envelope)
+                        self._mapnik_map.buffer_size = self.buffer_size
+                        mapnik.render(self._mapnik_map,im)
+                    else:
+                        # respect map background for blank tiles
+                        im.background = self._mapnik_map.background
                 if self.paletted:
                     response = im.tostring('png256')
                 else:

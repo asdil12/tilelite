@@ -1,6 +1,11 @@
 TileLite Changelog
 ------------------
 
+Version 0.1.4, September 24th 2009:
+---------------------------------
+  
+  * Faster blank tile response, using rendering no-op
+  
 
 Version 0.1.3, September 24th 2009:
 ---------------------------------
