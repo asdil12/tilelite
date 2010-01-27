@@ -32,7 +32,7 @@
                 units: 'm',
                 projection: new OpenLayers.Projection("EPSG:900913"),
                 displayProjection: new OpenLayers.Projection("EPSG:4326"),
-                maxExtent: new OpenLayers.Bounds(-20037508.34, -20037508.34, 20037508.34, 20037508.34),
+                maxExtent: new OpenLayers.Bounds(-20037508.34, -20037508.34, 20037508.34, 20037508.34)
                 };
             
             map = new OpenLayers.Map("map", options);
@@ -91,7 +91,7 @@
 </script>
 </head>
   
-<body onload="init()">
+<body onload="init();">
 
     <h3 style="position:absolute; z-index:10000; left: 100px;">Mapnik | <a href="http://trac.mapnik.org/wiki/XMLGettingStarted">World Population Demo Map</a></h3>
     <h4 style="position:absolute; z-index:10000; bottom: 5px; left: 10px;" id="zoom">Zoom:</h4>

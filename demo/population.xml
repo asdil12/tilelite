@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE Map>
 <!-- Sample Mapnik XML template by Dane Springmeyer -->
-<Map bgcolor="transparent" srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over" paths_from_xml="false">
+<Map bgcolor="transparent" srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over">
 
   <!-- Built from Seven Class sequential YIGnBu from www.colorbrewer.org -->
   <!-- Quantile breaks originally from QGIS layer classification -->  
@@ -96,14 +96,14 @@
      </Rule>
   </Style>
   
-  <Layer name="countries" status="on" srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over">
+  <Layer name="countries" srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over">
     <!-- Style order determines layering hierarchy -->
     <!-- Labels go on top so they are listed second -->
     <StyleName>population</StyleName>
     <StyleName>countries_label</StyleName>
     <Datasource>
       <Parameter name="type">shape</Parameter>
-      <Parameter name="file">demo/world_merc</Parameter>
+      <Parameter name="file">world_merc</Parameter>
     </Datasource>
   </Layer>
 
