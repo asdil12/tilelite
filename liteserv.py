@@ -124,7 +124,7 @@ if __name__ == '__main__':
     httpd = make_server(options.host, options.port, application)
     print "Listening on %s:%s..." % (options.host,options.port)
     print "To access locally view: http://localhost:%s" % options.port
-    remote = "To access remotely view: http://%s" % socket.gethostname()
+    remote = "To access remotely view: http://%s" % socket.getfqdn()
     if not options.port == 80:
         remote += ":%s" % options.port
     print remote

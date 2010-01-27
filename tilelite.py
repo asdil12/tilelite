@@ -6,6 +6,7 @@ __version__ = '0.1.3'
 __license__ = 'BSD'
 
 import os
+#import re
 import sys
 import time
 import math
@@ -13,11 +14,18 @@ import mapnik
 import urllib
 import tempfile
 
+# repair compatibility with mapnik2 development series
+if not hasattr(mapnik,'Envelope'):
+    mapnik.Envelope = mapnik.Box2d
 
+#MERC_PROJ4 = "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
 mercator = mapnik.Projection(MERC_PROJ4)
 
 CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
+
+#pattern = r'/(?P<version>\d{1,2}\.\d{1,3})/(?P<layername>[a-z]{1,64})/(?P<z>\d{1,10})/(?P<x>\d{1,10})/(?P<y>\d{1,10})\.(?P<extension>(?:png|jpg|gif))'
+#request_re = re.compile(pattern)
 
 def parse_config(cfg_file):
     from ConfigParser import SafeConfigParser
@@ -122,7 +130,7 @@ class Server(object):
         self.buffer_size = 128
         self.format = 'png'
         self.paletted = False
-        self.max_zoom = 18
+        self.max_zoom = 22
         self.debug = True
         self.watch_mapfile = False
         self.watch_interval = 2
@@ -331,8 +339,7 @@ class Server(object):
             response = im.tostring(self.format)
                         
         #self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
-        response_headers = [('Content-Type', mime_type),('Content-Length', str(len(response)))]
-        start_response(response_status,response_headers)
+        start_response(response_status,[('Content-Type', mime_type)])
         yield response
 
 if __name__ == '__main__':
