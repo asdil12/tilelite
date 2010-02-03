@@ -149,8 +149,13 @@ class Server(object):
         if mapfile.endswith('.xml'):
             mapnik.load_map(self._mapnik_map, self._mapfile)
         elif mapfile.endswith('.mml'):
-            from cascadenik import load_map as load_mml
-            load_mml(self._mapnik_map, self._mapfile)
+            from cascadenik import compile
+            compiled = '%s_compiled.xml' % os.path.splitext(str(mapfile))[0]
+            open(compiled, 'w').write(compile(self._mapfile))
+            mapnik.load_map(self._mapnik_map, compiled)
+            #from cascadenik import load_map as load_mml
+            #load_mml(self._mapnik_map, self._mapfile)
+
         self._mapnik_map.srs = MERC_PROJ4
         
         if self.watch_mapfile:
