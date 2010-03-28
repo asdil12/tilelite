@@ -10,15 +10,22 @@ import os
 import sys
 import time
 import math
-import mapnik
 import urllib
 import tempfile
+
+try:
+    import mapnik2 as mapnik
+except ImportError:
+    import mapnik
 
 # repair compatibility with mapnik2 development series
 if not hasattr(mapnik,'Envelope'):
     mapnik.Envelope = mapnik.Box2d
 
+# http://spatialreference.org/ref/epsg/3785/proj4/
 #MERC_PROJ4 = "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+
+# http://spatialreference.org/ref/sr-org/6/
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
 mercator = mapnik.Projection(MERC_PROJ4)
 
