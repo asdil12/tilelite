@@ -11,15 +11,19 @@
     }
   </style>
 
-<script src="http://openlayers.org/api/OpenLayers.js"></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
-<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key={{FILL_ME_IN}}"></script>
+<!-- set up to run local with these commands:
+        cd tilelite/demo
+        wget http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js
+        wget http://openlayers.org/download/OpenLayers-2.9.zip
+        unzip OpenLayers-2.9.zip
+-->
+
+<script src="OpenLayers-2.9/OpenLayers.js"></script>
+<script type="text/javascript" src="jquery-min.js"></script>
 
 <script type="text/javascript">
         var map;
-        
-        var enable_gmaps = true;
-        
+                
         function getZoom(e) {
             $('#zoom')[0].innerHTML = 'Zoom: ' + map.getZoom();
         }
@@ -52,13 +56,6 @@
             osm_official_tiles.attribution = "Map Data CC-BY-SA Openstreetmap.org";
                                      
             map.addLayers([tilelite_layer,osm_official_tiles]);
-
-            if (enable_gmaps) {
-                var gphy = new OpenLayers.Layer.Google( "Google Terrain", {type: G_PHYSICAL_MAP, 'sphericalMercator': true} );
-                var gmap = new OpenLayers.Layer.Google( "Google Streets", {'sphericalMercator': true});
-                var ghyb = new OpenLayers.Layer.Google("Google Satellite", {type: G_HYBRID_MAP, 'sphericalMercator': true} );
-                map.addLayers([ghyb, gmap, gphy]);
-            }
             
             map.addControl(new OpenLayers.Control.Scale());
             map.addControl(new OpenLayers.Control.MousePosition());
