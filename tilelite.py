@@ -23,7 +23,11 @@ if not hasattr(mapnik,'Envelope'):
     mapnik.Envelope = mapnik.Box2d
 
 # http://spatialreference.org/ref/epsg/3785/proj4/
-#MERC_PROJ4 = "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+#"+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+# QGIS 3785
+#"+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+# QGIS 4055
+#"+proj=longlat +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +no_defs"
 
 # http://spatialreference.org/ref/sr-org/6/
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
@@ -31,7 +35,7 @@ mercator = mapnik.Projection(MERC_PROJ4)
 
 CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
 
-#pattern = r'/(?P<version>\d{1,2}\.\d{1,3})/(?P<layername>[a-z]{1,64})/(?P<z>\d{1,10})/(?P<x>\d{1,10})/(?P<y>\d{1,10})\.(?P<extension>(?:png|jpg|gif))'
+#pattern = r'/(?P<version>\d{1,2}\.\d{1,3})\.\d{1,3})/(?P<layername>[a-z]{1,64})/(?P<z>\d{1,10})/(?P<x>\d{1,10})/(?P<y>\d{1,10})\.(?P<extension>(?:png|jpg|gif))'
 #request_re = re.compile(pattern)
 
 def parse_config(cfg_file):
@@ -80,7 +84,6 @@ class SphericalMercator(object):
         self.Ac = []
         self.DEG_TO_RAD = math.pi/180
         self.RAD_TO_DEG = 180/math.pi
-        self.cache = {}
         self.size = size
         for d in range(0,levels):
             e = size/2.0;
@@ -111,18 +114,17 @@ class SphericalMercator(object):
         h = self.RAD_TO_DEG * ( 2 * math.atan(math.exp(g)) - 0.5 * math.pi)
         return (f,h)
     
-    def xyz_to_envelope(self,x,y,zoom):
+    def xyz_to_envelope(self,x,y,zoom, tms_style=False):
         """ Convert XYZ to mapnik.Envelope """
-        #e_id = '%s-%s-%s' % (x,y,zoom)
-        #if e_id in self.cache:
-        #    return self.cache[e_id]
+        # flip y to match TMS spec
+        if tms_style:
+            y = (2**zoom-1) - y
         ll = (x * self.size,(y + 1) * self.size)
         ur = ((x + 1) * self.size, y * self.size)
         minx,miny = self.px_to_ll(ll,zoom)
         maxx,maxy = self.px_to_ll(ur,zoom)
         lonlat_bbox = mapnik.Envelope(minx,miny,maxx,maxy)
         env = mercator.forward(lonlat_bbox)
-        #self.cache[e_id] = env
         return env
         
 class Server(object):
@@ -287,7 +289,8 @@ class Server(object):
                             mapnik.render(self._mapnik_map,im)
                         else:
                             # respect map background for blank tiles
-                            im.background = self._mapnik_map.background
+                            if self._mapnik_map.background:
+                                im.background = self._mapnik_map.background
                         self.ready_cache(tile_dir)
                         if self.paletted:
                             im.save(tile_dir,'png256')
@@ -306,13 +309,15 @@ class Server(object):
                         mapnik.render(self._mapnik_map,im)
                     else:
                         # respect map background for blank tiles
-                        im.background = self._mapnik_map.background
+                        if self._mapnik_map.background:
+                            im.background = self._mapnik_map.background
                 if self.paletted:
                     response = im.tostring('png256')
                 else:
                     response = im.tostring(self.format)
                 mime_type = 'image/%s' % self.format
-                self.msg('Zoom,X,Y: %s,%s,%s' % (zoom,x,y))
+                self.msg('Zoom,X,Y: %s,%s,%s' % (zoom,x,y,))
+                self.msg('scale_denom: %s' % (self._mapnik_map.scale_denominator()))
             elif path_info.endswith('settings/'):
                 response = '<h2>TileLite Settings</h2>'
                 response += '<pre style="%s">%s</pre>' % (CSS_STYLE,self.settings())
