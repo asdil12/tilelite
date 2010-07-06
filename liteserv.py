@@ -61,6 +61,10 @@ parser.add_option('--cache-force', default=False, dest='cache_force', action='st
     help='Force regeneration of tiles while in caching mode (defaults to False)'
     )
 
+parser.add_option('--processes', default=1, dest='num_processes', type='int',
+    help='If werkzeug is installed, number of rendering processes to allow'
+    )
+    
 def run(process):
     try:
         process.serve_forever()
@@ -75,6 +79,16 @@ def strip_opts(options):
         if not k in remove and not v is None:
             params[k] = v
     return params
+
+def print_url(options):
+    if not application.debug:
+        sys.stderr.write('TileLite debug mode is *off*...\n')
+    sys.stderr.write("Listening on %s:%s...\n" % (options.host,options.port))
+    sys.stderr.write("To access locally view: http://localhost:%s\n" % options.port)
+    remote = "To access remotely view: http://%s" % socket.getfqdn()
+    if not options.port == 80:
+        remote += ":%s" % options.port
+    sys.stderr.write('%s\n' % remote)
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -104,7 +118,7 @@ if __name__ == '__main__':
             CONFIG = None
     
     if CONFIG:
-        print "[TileLite Debug] --> Using config file: '%s'" % os.path.abspath(CONFIG)        
+        sys.stderr.write("[TileLite Debug] --> Using config file: '%s'" % os.path.abspath(CONFIG))      
 
     if options.cache_path and not options.caching:
         options.caching = True
@@ -120,15 +134,25 @@ if __name__ == '__main__':
     from tilelite import Server
     application = Server(mapfile, CONFIG)
     application.absorb_options(strip_opts(options.__dict__))
-    
-    httpd = make_server(options.host, options.port, application)
-    print "Listening on %s:%s..." % (options.host,options.port)
-    print "To access locally view: http://localhost:%s" % options.port
-    remote = "To access remotely view: http://%s" % socket.getfqdn()
-    if not options.port == 80:
-        remote += ":%s" % options.port
-    print remote
-    if not application.debug:
-        print 'TileLite debug mode is *off*...'
-    
-    run(httpd)
+                
+    try:
+        from werkzeug import run_simple
+        print_url(options)
+        run_simple(options.host, options.port, application, threaded=False, processes=options.num_processes)
+    except:
+        if options.num_processes > 1:
+            sys.exit('The werkzeug python server must be installed to run multi-process\n')
+        sys.stderr.write('Note: werkzeug is not installed so falling back to built-in python wsgiref server.\n')
+        sys.stderr.write('(which is slower than werkzeug)\n')
+        sys.stderr.write('Install werkzeug from http://werkzeug.pocoo.org/\n\n')
+        
+        from wsgiref import simple_server
+        from SocketServer import ThreadingMixIn
+        class myServer(ThreadingMixIn, simple_server.WSGIServer):
+            pass 
+        httpd = myServer(('',options.port), simple_server.WSGIRequestHandler,)
+        httpd.set_app(application)
+        #httpd = make_server(options.host, options.port, application)        
+        print_url(options)
+        run(httpd)
+        
