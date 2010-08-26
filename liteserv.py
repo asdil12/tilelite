@@ -88,10 +88,9 @@ def print_url(options):
     remote = "To access remotely view: http://%s" % socket.getfqdn()
     if not options.port == 80:
         remote += ":%s" % options.port
-    if not socket.gethostname() == socket.getfqdn():
-        remote += "\nor view: http://%s" % socket.gethostname()
-        if not options.port == 80:
-            remote += ":%s" % options.port
+    remote += "\nor view: http://%s" % socket.gethostbyname(socket.gethostname())
+    if not options.port == 80:
+        remote += ":%s" % options.port
     sys.stderr.write('%s\n' % remote)
 
 if __name__ == '__main__':
