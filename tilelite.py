@@ -28,6 +28,8 @@ if not hasattr(mapnik,'Envelope'):
 #"+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 # QGIS 4055
 #"+proj=longlat +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +no_defs"
+# proj's WGS 84 / Pseudo-Mercator <3857>
+# +proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs <>
 
 # http://spatialreference.org/ref/sr-org/6/
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
@@ -82,6 +84,7 @@ class SphericalMercator(object):
         self.Cc = []
         self.zc = []
         self.Ac = []
+        self.levels = levels
         self.DEG_TO_RAD = math.pi/180
         self.RAD_TO_DEG = 180/math.pi
         self.size = size
@@ -108,6 +111,7 @@ class SphericalMercator(object):
     
     def px_to_ll(self,px,zoom):
         """ Convert pixel postion to LatLong (EPSG:4326) """
+        # TODO - more graceful handling of indexing error
         e = self.zc[zoom]
         f = (px[0] - e[0])/self.Bc[zoom]
         g = (px[1] - e[1])/-self.Cc[zoom]
@@ -149,12 +153,14 @@ class Server(object):
         self.cache_force = False
         self.cache_path = '/tmp' #tempfile.gettempdir()
 
+        self._mapnik_map = mapnik.Map(self.size,self.size)
+
         if self._config:
             self.absorb_options(parse_config(self._config))
+        else:
+            self.post_init_setup()
 
-        self._merc = SphericalMercator(levels=self.max_zoom+1,size=self.size)
         self._mapfile = mapfile
-        self._mapnik_map = mapnik.Map(self.size,self.size)
         if mapfile.endswith('.xml'):
             mapnik.load_map(self._mapnik_map, self._mapfile)
         elif mapfile.endswith('.mml'):
@@ -165,7 +171,6 @@ class Server(object):
             #from cascadenik import load_map as load_mml
             #load_mml(self._mapnik_map, self._mapfile)
 
-        self._mapnik_map.srs = MERC_PROJ4
         
         if self.watch_mapfile:
             self.modified = os.path.getmtime(self._mapfile)
@@ -173,7 +178,11 @@ class Server(object):
             thread.start_new_thread(self.watcher, ())
         self._mapnik_map.zoom_all()
         self.envelope = self._mapnik_map.envelope()
-                
+
+    def post_init_setup(self):
+         self._merc = SphericalMercator(levels=self.max_zoom+1,size=self.size)
+         self._mapnik_map.srs = MERC_PROJ4
+                       
     def watcher(self):
         failed = 0
         while 1:
@@ -254,6 +263,7 @@ class Server(object):
                 if not new == cur:
                     setattr(self,attr,new)
                     self._changed.append(attr)
+        self.post_init_setup()
         self.msg(self.settings())
 
     def ready_cache(self,path_to_check):
@@ -282,6 +292,7 @@ class Server(object):
                 if self.caching:
                     tile_dir = os.path.join(self.cache_path,str(zoom),str(x),'%s.%s' % (str(y),self.format) )
                     if self.cache_force or not os.path.exists(tile_dir):
+                        # TODO - throw an error if zoom > self._merc.levels
                         envelope = self._merc.xyz_to_envelope(x,y,zoom)
                         if self.hit(envelope): # skip rendering and ds query if tile will be blank
                             self._mapnik_map.zoom_to_box(envelope)
