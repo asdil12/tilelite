@@ -146,16 +146,18 @@ if __name__ == '__main__':
         if options.num_processes > 1:
             sys.exit('The werkzeug python server must be installed to run multi-process\n')
         sys.stderr.write('Note: werkzeug is not installed so falling back to built-in python wsgiref server.\n')
-        sys.stderr.write('(which is slower than werkzeug)\n')
         sys.stderr.write('Install werkzeug from http://werkzeug.pocoo.org/\n\n')
         
         from wsgiref import simple_server
-        from SocketServer import ThreadingMixIn
-        class myServer(ThreadingMixIn, simple_server.WSGIServer):
-            pass 
-        httpd = myServer(('',options.port), simple_server.WSGIRequestHandler,)
-        httpd.set_app(application)
-        #httpd = make_server(options.host, options.port, application)        
+        # below code was for testing multi-threaded rendering
+        # which only works if we copy a map object per thread
+        # so avoid this and only run multiprocess...
+        #from SocketServer import ThreadingMixIn
+        #class myServer(ThreadingMixIn, simple_server.WSGIServer):
+        #    pass 
+        #httpd = myServer(('',options.port), simple_server.WSGIRequestHandler,)
+        #httpd.set_app(application)
+        httpd = make_server(options.host, options.port, application)        
         print_url(options)
         run(httpd)
         
