@@ -33,12 +33,28 @@ if not hasattr(mapnik,'Envelope'):
 
 # http://spatialreference.org/ref/sr-org/6/
 MERC_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over"
+MERC_ELEMENTS = dict([p.split('=') for p in MERC_PROJ4.split() if '=' in p])
 mercator = mapnik.Projection(MERC_PROJ4)
 
 CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; border-left-width: 0px; border-bottom-width: 2px; border-right-width: 0px; border-top-width: 2px; width: 95%; border-color: #a2d545; border-style: solid; font-size: 14px; margin: 10px; padding: 10px; background: #eeeeee; -moz-border-radius: 2px; -webkit-border-radius: 2px;"
 
 #pattern = r'/(?P<version>\d{1,2}\.\d{1,3})\.\d{1,3})/(?P<layername>[a-z]{1,64})/(?P<z>\d{1,10})/(?P<x>\d{1,10})/(?P<y>\d{1,10})\.(?P<extension>(?:png|jpg|gif))'
 #request_re = re.compile(pattern)
+
+def is_merc(srs):
+    srs = srs.lower()
+    if '900913' in srs:
+        return True
+    elif '3857' in srs:
+        return True
+    elif not 'merc' in srs:
+        return False
+    # strip optional modifiers (those without =)
+    elements = dict([p.split('=') for p in srs.split() if '=' in p])
+    for p in elements:
+        if MERC_ELEMENTS.get(p, None) != elements.get(p, None):
+            return False
+    return True
 
 def parse_config(cfg_file):
     from ConfigParser import SafeConfigParser
@@ -180,8 +196,10 @@ class Server(object):
         self.envelope = self._mapnik_map.envelope()
 
     def post_init_setup(self):
-         self._merc = SphericalMercator(levels=self.max_zoom+1,size=self.size)
-         self._mapnik_map.srs = MERC_PROJ4
+        self._merc = SphericalMercator(levels=self.max_zoom+1,size=self.size)
+        if not is_merc(self._mapnik_map.srs):
+            self._mapnik_map.srs = MERC_PROJ4
+            self.msg('Map is not in spherical mercator, so setting that projection....')
                        
     def watcher(self):
         failed = 0
@@ -197,8 +215,10 @@ class Server(object):
                     elif self._mapfile.endswith('.mml'):
                         from cascadenik import load_map as load_mml
                         load_mml(self._mapnik_map, self._mapfile)
-                    self._mapnik_map.srs = MERC_PROJ4
                     self.msg('Mapfile successfully reloaded from %s' % self._mapfile)
+                    if not is_merc(self._mapnik_map.srs):
+                        self._mapnik_map.srs = MERC_PROJ4
+                        self.msg('Map is not in spherical mercator, so setting that projection....')
                     failed = 0
                 except Exception, E:
                     failed += 1
