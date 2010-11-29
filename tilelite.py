@@ -2,7 +2,7 @@
 
 __author__ = 'Dane Springmeyer (dbsgeo [ -a- ] gmail.com)'
 __copyright__ = 'Copyright 2009, Dane Springmeyer'
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 __license__ = 'BSD'
 
 import os
@@ -180,13 +180,27 @@ class Server(object):
         if mapfile.endswith('.xml'):
             mapnik.load_map(self._mapnik_map, self._mapfile)
         elif mapfile.endswith('.mml'):
-            from cascadenik import compile
-            compiled = '%s_compiled.xml' % os.path.splitext(str(mapfile))[0]
-            open(compiled, 'w').write(compile(self._mapfile))
-            mapnik.load_map(self._mapnik_map, compiled)
-            #from cascadenik import load_map as load_mml
-            #load_mml(self._mapnik_map, self._mapfile)
-
+            import cascadenik
+            if hasattr(cascadenik,'VERSION'):
+                major = int(cascadenik.VERSION.split('.')[0])
+                if major < 1:
+                    from cascadenik import compile as _compile
+                    compiled = '%s_compiled.xml' % os.path.splitext(str(mapfile))[0]
+                    open(compiled, 'w').write(_compile(self._mapfile))
+                    mapnik.load_map(self._mapnik_map, compiled)
+                elif major == 1:
+                    if str(mapfile).startswith('http'):
+                        output_dir = os.getcwd() #os.path.expanduser('~/.cascadenik')
+                    else:
+                        output_dir = os.path.dirname(str(mapfile))
+                    cascadenik.load_map(self._mapnik_map,mapfile,output_dir,verbose=self.debug)
+                elif major > 1:
+                    raise NotImplementedError('This TileLite version does not yet support Cascadenik > 1.x, please upgrade to the latest release')
+            else:
+                from cascadenik import compile as _compile
+                compiled = '%s_compiled.xml' % os.path.splitext(str(mapfile))[0]
+                open(compiled, 'w').write(_compile(self._mapfile))
+                mapnik.load_map(self._mapnik_map, compiled)
         
         if self.watch_mapfile:
             self.modified = os.path.getmtime(self._mapfile)
