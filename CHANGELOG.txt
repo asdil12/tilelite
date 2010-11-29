@@ -1,8 +1,16 @@
 TileLite Changelog
 ------------------
 
-Version 0.1.4, September 24th 2009:
----------------------------------
+Version 0.1.4, Novemeber 29th 2010:
+-----------------------------------
+  
+  * Support for Mapnik2
+  
+  * Support for Cascadenik 1.x
+  
+  * Ensured the liteserv.py development server runs in single thread
+  
+  * Better detection if map srs is spherical mercator to avoid setting it if not needed
   
   * Faster blank tile response, using rendering no-op
   
