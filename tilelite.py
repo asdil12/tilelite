@@ -43,11 +43,12 @@ CSS_STYLE = "font-family: 'Lucida Grande', Verdana, Helvetica, sans-serif; borde
 
 def is_merc(srs):
     srs = srs.lower()
-    if '900913' in srs:
+    if 'epsg:900913' in srs:
         return True
-    elif '3857' in srs:
+    elif 'epsg:3857' in srs:
         return True
     elif not 'merc' in srs:
+        print 'no merc', srs
         return False
     # strip optional modifiers (those without =)
     elements = dict([p.split('=') for p in srs.split() if '=' in p])
@@ -173,8 +174,6 @@ class Server(object):
 
         if self._config:
             self.absorb_options(parse_config(self._config))
-        else:
-            self.post_init_setup()
 
         self._mapfile = mapfile
         if mapfile.endswith('.xml'):
@@ -201,6 +200,8 @@ class Server(object):
                 compiled = '%s_compiled.xml' % os.path.splitext(str(mapfile))[0]
                 open(compiled, 'w').write(_compile(self._mapfile))
                 mapnik.load_map(self._mapnik_map, compiled)
+
+        self.post_init_setup()
         
         if self.watch_mapfile:
             self.modified = os.path.getmtime(self._mapfile)
@@ -297,7 +298,6 @@ class Server(object):
                 if not new == cur:
                     setattr(self,attr,new)
                     self._changed.append(attr)
-        self.post_init_setup()
         self.msg(self.settings())
 
     def ready_cache(self,path_to_check):
@@ -317,11 +317,21 @@ class Server(object):
         if not self._locked:
             path_info = environ['PATH_INFO']
             qs = environ['QUERY_STRING']    
+            zoom,x,y = None,None,None
             if qs:
                 query = parse_query(qs)
-            if is_image_request(path_info):
+                x = query.get('x')
+                y = query.get('y')
+                zoom = query.get('z')
+                if x and y and zoom:
+                    x = int(x)
+                    y = int(y)
+                    zoom = int(zoom)
+                self.format = query.get('format','png') 
+            elif is_image_request(path_info):
                 uri, self.format = path_info.split('.')
                 zoom,x,y = map(int,uri.split('/')[-3:])
+            if (x is not None) and (y is not None) and (zoom is not None):
                 im = mapnik.Image(self.size,self.size)
                 if self.caching:
                     tile_dir = os.path.join(self.cache_path,str(zoom),str(x),'%s.%s' % (str(y),self.format) )
@@ -383,8 +393,11 @@ class Server(object):
             elif not path_info.strip('/'):
                 root = '%s%s' % (environ['SCRIPT_NAME'], path_info.strip('/'))
                 response = '''<h2>TileLite</h2>
-                <div style="%(style)s"><p>Welcome, ready to accept a tile request in the format of %(root)s/zoom/x/y.png</p>
-                <p>url: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
+                <div style="%(style)s"><p>Welcome, ready to accept a tile request in the format of:</p>
+                <p>%(root)s/zoom/x/y.png</p>
+                <p>or</p>
+                <p>%(root)s/?x=0&y=0&z=0&format=png</p>
+                <p>Example url: <a href="%(root)s/1/0/0.png">%(root)s/1/0/0.png</a></p>
                 <p>js: var tiles = new OpenLayers.Layer.OSM("Mapnik", "http://%(http_host)s/${z}/${x}/${y}.png");</p>
                 <p>See TileLite settings: <a href="%(root)s/settings/">%(root)s/settings/</a>
                 | <a href="%(root)s/settings.json">%(root)s/settings.json</a></p>

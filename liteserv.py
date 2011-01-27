@@ -45,7 +45,7 @@ parser.add_option('--paletted', default=False, dest='paletted', action='store_tr
     help='Use paletted/8bit PNG (defaults to False)'
     )
 
-parser.add_option('-d','--debug', default=True, dest='debug', action='store_true',
+parser.add_option('-d','--debug', default=True, dest='debug', type="choice", choices=('True','False'),
     help='Run in debug mode (defaults to True)'
     )
 
