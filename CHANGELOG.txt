@@ -1,6 +1,14 @@
 TileLite Changelog
 ------------------
 
+Version 0.1.5, Novemeber 29th 2010:
+-----------------------------------
+
+Fix bug in spherical mercator handling
+
+Enable ?x=&y=&z= style requests
+
+
 Version 0.1.4, Novemeber 29th 2010:
 -----------------------------------
   

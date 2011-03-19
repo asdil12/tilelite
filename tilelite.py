@@ -2,7 +2,7 @@
 
 __author__ = 'Dane Springmeyer (dbsgeo [ -a- ] gmail.com)'
 __copyright__ = 'Copyright 2009, Dane Springmeyer'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __license__ = 'BSD'
 
 import os
