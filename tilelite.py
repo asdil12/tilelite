@@ -12,15 +12,7 @@ import time
 import math
 import urllib
 import tempfile
-
-try:
-    import mapnik2 as mapnik
-except ImportError:
-    import mapnik
-
-# repair compatibility with mapnik2 development series
-if not hasattr(mapnik,'Envelope'):
-    mapnik.Envelope = mapnik.Box2d
+import mapnik
 
 # http://spatialreference.org/ref/epsg/3785/proj4/
 #"+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
@@ -224,9 +216,9 @@ class Server(object):
                 time.sleep(self.watch_interval/2.0)
                 self.msg('Mapfile **changed**, reloading... ')
                 try:
-                    self._mapnik_map = Map(self.size,self.size)
+                    self._mapnik_map = mapnik.Map(self.size,self.size)
                     if self._mapfile.endswith('.xml'):
-                        load_map(self._mapnik_map, self._mapfile)
+                        mapnik.load_map(self._mapnik_map, self._mapfile)
                     elif self._mapfile.endswith('.mml'):
                         from cascadenik import load_map as load_mml
                         load_mml(self._mapnik_map, self._mapfile)
