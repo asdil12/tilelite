@@ -306,6 +306,9 @@ class Server(object):
         """ WSGI request handler """
         response_status = "200 OK"
         mime_type = 'text/html'
+        last_modified = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.gmtime())
+        tile_cached = False
+        cache_control = 'no-cache'
         if not self._locked:
             path_info = environ['PATH_INFO']
             qs = environ['QUERY_STRING']    
@@ -348,6 +351,15 @@ class Server(object):
                         # todo: benchmark opening without using mapnik...
                         im = im.open(tile_dir)
                         self.msg('cache hit!')
+                    cache_control = 'max-age=521698'
+                    tile_mod = os.path.getmtime(tile_dir)
+                    last_modified = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(tile_mod))
+                    tile_client = environ.get('HTTP_IF_MODIFIED_SINCE', 'Thu, 01 Jan 1970 00:00:00 GMT')
+                    cached_tile = time.mktime(time.strptime(tile_client, '%a, %d %b %Y %H:%M:%S %Z'))
+                    if cached_tile >= tile_mod:
+                        # 304
+                        response_status = "304 Not Modified"
+                        tile_cached = True
                 else:
                     envelope = self._merc.xyz_to_envelope(x,y,zoom)
                     if self.hit(envelope): # skip rendering and ds query if tile will be blank
@@ -358,7 +370,9 @@ class Server(object):
                         # respect map background for blank tiles
                         if self._mapnik_map.background:
                             im.background = self._mapnik_map.background
-                if self.paletted:
+                if tile_cached:
+                    response = ''
+                elif self.paletted:
                     response = im.tostring('png256')
                 else:
                     response = im.tostring(self.format)
@@ -406,7 +420,7 @@ class Server(object):
             response = im.tostring(self.format)
                         
         #self.msg('Multithreaded: %s | Multiprocess: %s' % (environ['wsgi.multithread'],environ['wsgi.multiprocess']))
-        start_response(response_status,[('Content-Type', mime_type)])
+        start_response(response_status,[('Content-Type', mime_type), ('Last-Modified', last_modified), ('Cache-Control', cache_control)])
         yield response
 
 if __name__ == '__main__':
