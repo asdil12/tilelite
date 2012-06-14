@@ -141,7 +141,7 @@ class SphericalMercator(object):
         return env
         
 class Server(object):
-    def __init__(self, mapfile, config=None):
+    def __init__(self, mapfile, config=None, options=None):
         # private
         self._changed = []
         self._config = config
@@ -166,6 +166,9 @@ class Server(object):
 
         if self._config:
             self.absorb_options(parse_config(self._config))
+
+        if options:
+            self.absorb_options(options)
 
         self._mapfile = mapfile
         if mapfile.endswith('.xml'):
