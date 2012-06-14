@@ -9,10 +9,19 @@ import os
 #import re
 import sys
 import time
+import calendar
 import math
 import urllib
 import tempfile
-import mapnik
+
+try:
+    import mapnik
+except ImportError:
+    import mapnik2 as mapnik
+
+# repair compatibility with mapnik2 development series
+if not hasattr(mapnik,'Envelope'):
+    mapnik.Envelope = mapnik.Box2d
 
 # http://spatialreference.org/ref/epsg/3785/proj4/
 #"+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
@@ -199,6 +208,7 @@ class Server(object):
         self.post_init_setup()
         
         if self.watch_mapfile:
+            self.msg('Forking watcher thread')
             self.modified = os.path.getmtime(self._mapfile)
             import thread
             thread.start_new_thread(self.watcher, ())
@@ -356,9 +366,9 @@ class Server(object):
                         self.msg('cache hit!')
                     cache_control = 'max-age=521698'
                     tile_mod = os.path.getmtime(tile_dir)
-                    last_modified = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(tile_mod))
+                    last_modified = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(tile_mod))
                     tile_client = environ.get('HTTP_IF_MODIFIED_SINCE', 'Thu, 01 Jan 1970 00:00:00 GMT')
-                    cached_tile = time.mktime(time.strptime(tile_client, '%a, %d %b %Y %H:%M:%S %Z'))
+                    cached_tile = calendar.timegm(time.strptime(tile_client, '%a, %d %b %Y %H:%M:%S %Z'))
                     if cached_tile >= tile_mod:
                         # 304
                         response_status = "304 Not Modified"
