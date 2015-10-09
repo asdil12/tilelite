@@ -365,7 +365,7 @@ class Server(object):
                         im = im.open(tile_dir)
                         self.msg('cache hit!')
                     cache_control = 'max-age=521698'
-                    tile_mod = os.path.getmtime(tile_dir)
+                    tile_mod = int(os.path.getmtime(tile_dir))
                     last_modified = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(tile_mod))
                     tile_client = environ.get('HTTP_IF_MODIFIED_SINCE', 'Thu, 01 Jan 1970 00:00:00 GMT')
                     cached_tile = calendar.timegm(time.strptime(tile_client, '%a, %d %b %Y %H:%M:%S %Z'))
