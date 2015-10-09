@@ -343,7 +343,7 @@ class Server(object):
                 im = mapnik.Image(self.size,self.size)
                 if self.caching:
                     tile_dir = os.path.join(self.cache_path,str(zoom),str(x),'%s.%s' % (str(y),self.format) )
-                    if self.cache_force or not os.path.exists(tile_dir):
+                    if self.cache_force or not os.path.exists(tile_dir) or os.path.getmtime(tile_dir) < self.modified:
                         # TODO - throw an error if zoom > self._merc.levels
                         envelope = self._merc.xyz_to_envelope(x,y,zoom)
                         if self.hit(envelope): # skip rendering and ds query if tile will be blank
